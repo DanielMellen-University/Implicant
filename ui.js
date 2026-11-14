@@ -6,6 +6,7 @@ let values = [...initialValues];
 let selectedGroup = -1;
 let selectedPaint = 0;
 let paintingPointer = null;
+let pendingTouch = null;
 let cycleTaps = true;
 let form = 'SOP';
 
@@ -309,19 +310,52 @@ document.querySelector('#cycle-mode').addEventListener('click', (event) => {
 map.addEventListener('pointerdown', (event) => {
   const cell = event.target.closest('[data-minterm]');
   if (!cell) return;
+  // Touch: wait for a confirmed tap so a scroll starting on a cell
+  // does not change the map. Mouse and pen still paint immediately
+  // and can drag across cells.
+  if (event.pointerType === 'touch') {
+    pendingTouch = {
+      pointerId: event.pointerId,
+      minterm: Number(cell.dataset.minterm),
+      startX: event.clientX,
+      startY: event.clientY,
+    };
+    return;
+  }
   paintingPointer = event.pointerId;
   paintCell(cell, event.pointerType);
-  if (event.pointerType !== 'touch') event.preventDefault();
+  event.preventDefault();
+});
+
+map.addEventListener('pointermove', (event) => {
+  if (!pendingTouch || event.pointerId !== pendingTouch.pointerId) return;
+  const distance = Math.hypot(event.clientX - pendingTouch.startX, event.clientY - pendingTouch.startY);
+  if (distance > 10) pendingTouch = null;
 });
 
 map.addEventListener('pointerover', (event) => {
-  if (paintingPointer === null || !event.buttons) return;
+  if (paintingPointer === null || event.pointerId !== paintingPointer || !event.buttons) return;
   const cell = event.target.closest('[data-minterm]');
   if (cell) paintCell(cell, event.pointerType);
 });
 
-window.addEventListener('pointerup', () => { paintingPointer = null; });
-window.addEventListener('pointercancel', () => { paintingPointer = null; });
+function endPointer(event) {
+  if (pendingTouch && event.pointerId === pendingTouch.pointerId) {
+    if (event.type === 'pointerup') {
+      const target = document.elementFromPoint(event.clientX, event.clientY);
+      const cell = target && target.closest ? target.closest('[data-minterm]') : null;
+      const distance = Math.hypot(event.clientX - pendingTouch.startX, event.clientY - pendingTouch.startY);
+      if (cell && Number(cell.dataset.minterm) === pendingTouch.minterm && distance <= 10) {
+        paintCell(cell, 'touch');
+      }
+    }
+    pendingTouch = null;
+  }
+  if (event.pointerId === paintingPointer) paintingPointer = null;
+}
+
+window.addEventListener('pointerup', endPointer);
+window.addEventListener('pointercancel', endPointer);
 
 map.addEventListener('click', (event) => {
   // Keep keyboard activation available; pointer input is handled above.
