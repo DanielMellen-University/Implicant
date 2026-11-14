@@ -29,26 +29,32 @@ Every axis uses Gray-code headers. Map cells use `positionToMinterm` and `minter
 - The 0 / 1 / X selector chooses a paint value. Mouse clicks and click-drag paint cells with that value. Touch devices can toggle Cycle taps or choose a paint value to paint; the paint selector stays available.
 - Changing the variable count creates a cleared map. The initial four-variable map starts with an interesting example.
 - Each cell shows its minterm number, small, at the top-left.
-- The live minimal SOP output uses prime marks for complements, as in `F = B′D′ + BD`.
+- The live minimal expression defaults to SOP and uses prime marks for complements, as in `F = B′D′ + BD`. A visible SOP / POS switch changes the minimized form; POS minimizes zero groups and labels the result `Minimal POS`.
 - Output is `0` if there are no 1s, and `1` if everything is covered.
 - Quine–McCluskey finds prime implicants. X cells are usable but never required.
 - Essential primes are selected first, then an exact smallest cover is chosen. The solver must stay responsive at 64 cells.
 - Randomize fills the current map with mostly 0 and 1 values and a few X values. Clear sets every cell to 0.
+- The minterm list reports the input ones as `F = Σm(...)` and includes `+ d(...)` only when there are don't cares.
+- The truth table lists every input combination. Its F buttons update the same canonical map values, and map edits immediately update the corresponding table row.
+- The collapsible explanation panel explains the kept and dropped variables for a legend group. Selecting a group outlines its cells and opens the explanation.
+- The URL query stores variable count (`v`), cell values (`cells`, encoded as 0 / 1 / 2 for 0 / 1 / X), and form (`form`). State updates with `replaceState`, so painting does not fill browser history. Invalid state returns to the default four-variable example.
 
 ## Visualization
 
 - Each chosen group has its own color.
 - Grouped cells get a tint plus a small colored dot per group membership. Overlapping groups are allowed, so a cell may have several dots.
 - The legend shows a swatch, term, and covered cell count. Selecting a legend row outlines its cells, including cells on other layers.
-- Layer tabs are at least 44px tall. On narrow screens, 5- and 6-variable maps show one layer at a time; tabs mark layers that contain outlined cells. On wide screens, both 5-variable layers and all four 6-variable layers are visible.
+- 5- and 6-variable maps always show every layer, each with a small label above it (A=0 / A=1, or AB=00 and the other Gray-code labels). On a wide screen, 5-variable layers sit side by side and 6-variable layers use a 2×2 Gray-code arrangement. On a phone, the layers stack vertically. There are no layer tab buttons.
 
 ## UI
 
-- The app uses a warm charcoal palette: background `#1f1e1d`, surface `#2c2c2a`, and text `#f1efe8`.
+- The app is dark-only and uses a warm charcoal palette: background `#1f1e1d`, surface `#2c2c2a`, and text `#f1efe8`. `color-scheme: dark` and the browser theme color stay on `#1f1e1d`.
 - Flat and minimal: 0.5px borders, 8px radius, generous spacing, no gradients or shadows.
 - Touch targets are at least 44px. Controls have instant active feedback and do not rely on hover.
-- The map and live answer are visible on load. A new user can solve something in under 10 seconds without instructions.
-- SOP / POS toggle, minterm list, truth table, explanations, and shareable URL state are later milestone features.
+- The map and live answer are visible on load with the four-variable example. Extras are in clearly labeled collapsible panels so the demo remains immediately playable.
+- The current controls are the 2–6 variable selector, 0 / 1 / X paint selector, touch Cycle taps control, Randomize, and Clear.
+- Multi-group cells use hard-stop split tints and colored dots, with a legend that outlines selected group cells across layers.
+- The 6-variable truth table is contained in a scrollable region. Layouts fit narrow phones without reducing map cells below 44px or introducing horizontal page overflow.
 
 ## Future solver validation and CI
 
@@ -71,9 +77,9 @@ Every axis uses Gray-code headers. Map cells use `positionToMinterm` and `minter
 - Gray-code layouts for 2, 3, 4, 5, and 6 variables using the shared solver helpers.
 - Variable-count and paint selectors, touch cycling, map randomization and clearing, responsive layer layouts, and live SOP output.
 
-### Later extras
+### Milestone 4: solver extras
 
-- SOP / POS toggle, minterm list, truth table, explanations, and shareable URL state.
+- SOP / POS toggle, minterm list, synchronized truth table, group explanations, and shareable URL state.
 
 ## Code quality
 
