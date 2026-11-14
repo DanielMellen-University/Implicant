@@ -1,5 +1,5 @@
-import { getLayout, mintermToPosition, positionToMinterm, solve } from './solver.js';
-import { colorsForGroups, randomizeValues } from './helpers.js';
+import { getLayout, positionToMinterm, solve } from './solver.js';
+import { colorsForGroups, randomizeValues } from './helpers.js?v=2';
 const initialValues = [1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0];
 let nVars = 4;
 let values = [...initialValues];
@@ -9,8 +9,20 @@ let paintingPointer = null;
 let pendingTouch = null;
 let cycleTaps = true;
 let form = 'SOP';
-const colorSeed = (Math.random() * 0xffffffff) >>> 0;
-let groupColors = [];
+let groupColors = new Map();
+let activeView = 'groups';
+let mapCells = [];
+
+const narrowLayout = window.matchMedia('(max-width: 879px)');
+const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+const touchLayout = window.matchMedia('(any-pointer: coarse)');
+const tintAnimations = new WeakMap();
+const viewButtons = document.querySelectorAll('[data-view]');
+const viewBar = document.querySelector('.views');
+const mapPanel = document.querySelector('#map-panel');
+const panels = new Map([...viewButtons].map(button => [
+  button.dataset.view, document.getElementById(button.getAttribute('aria-controls')),
+]));
 
 const map = document.querySelector('#kmap');
 const expression = document.querySelector('#expression');
@@ -19,6 +31,12 @@ const variableControl = document.querySelector('#variable-count');
 const truthTable = document.querySelector('#truth-table');
 const mintermList = document.querySelector('#minterm-list');
 const explanation = document.querySelector('#explanation');
+const groupHint = document.querySelector('#group-hint');
+const whyHint = document.querySelector('#why-hint');
+const mapHint = document.querySelector('#map-hint');
+const truthHint = document.querySelector('#truth-hint');
+const cycleButton = document.querySelector('#cycle-mode');
+const answerLabel = document.querySelector('#answer-label');
 
 function readUrlState() {
   const params = new URLSearchParams(window.location.search);
@@ -55,21 +73,47 @@ function element(tag, className, text) {
   return node;
 }
 
-
 function groupTint(color) {
   return `color-mix(in srgb, ${color} 32%, var(--bg))`;
 }
 
-function cellBackground(memberships) {
-  const colors = memberships.map((index) => groupTint(groupColors[index]));
-  if (colors.length === 1) return colors[0];
+function cellBackground(colors) {
+  if (colors.length === 0) return '';
+  if (colors.length === 1) return groupTint(colors[0]);
   const stops = colors.map((color, index) => {
     const start = (index / colors.length) * 100;
     const end = ((index + 1) / colors.length) * 100;
-    return `${color} ${start}% ${end}%`;
+    return `${groupTint(color)} ${start}% ${end}%`;
   });
-  // Hard stops, not a soft blend, so each group gets an equal flat slice.
   return `linear-gradient(to right, ${stops.join(', ')})`;
+}
+
+function showView(view, animate = false) {
+  const wasPinned = animate && narrowLayout.matches
+    && viewBar.getBoundingClientRect().top <= parseFloat(getComputedStyle(viewBar).top) + 1;
+  activeView = view;
+  for (const button of viewButtons) {
+    const selected = button.dataset.view === view;
+    button.setAttribute('aria-pressed', String(selected));
+    if (button.dataset.view === 'map') continue;
+    panels.get(button.dataset.view).hidden = !selected;
+  }
+  mapPanel.hidden = narrowLayout.matches && view !== 'map';
+  if (wasPinned) viewBar.scrollIntoView({ block: 'start' });
+  if (animate && !reducedMotion.matches) {
+    panels.get(view).animate([{ opacity: .65 }, { opacity: 1 }], { duration: 150, easing: 'ease-out' });
+  }
+}
+
+function updatePaintControls() {
+  document.querySelectorAll('[data-paint]').forEach((button) => {
+    button.setAttribute('aria-pressed', String(Number(button.dataset.paint) === selectedPaint));
+  });
+  cycleButton.setAttribute('aria-pressed', String(cycleTaps));
+  mapHint.textContent = touchLayout.matches && cycleTaps
+    ? 'Tap a cell to cycle through 0, 1, and X. X means don’t care.'
+    : 'Choose 0, 1, or X to paint. X means don’t care.';
+  truthHint.textContent = `Select an output to paint it ${selectedPaint === 2 ? 'X' : selectedPaint}.`;
 }
 
 function cellsForSolver() {
@@ -91,16 +135,15 @@ function renderVariableControl() {
   }
 }
 
-function buildLayer(layout, layerIndex, groups) {
+function buildLayer(layout, layerIndex) {
   const layer = element('section', 'map-layer');
   layer.dataset.layer = String(layerIndex);
   layer.setAttribute('aria-label', layout.layerCount === 1 ? 'Karnaugh map' : `${layout.layerVariables} = ${layout.layerHeaders[layerIndex]} layer`);
   if (layout.layerCount > 1) {
-    layer.append(element('h2', 'layer-title', `${layout.layerVariables}=${layout.layerHeaders[layerIndex]}`));
+    layer.append(element('h3', 'layer-title', `${layout.layerVariables} = ${layout.layerHeaders[layerIndex]}`));
   }
 
   const grid = element('div', 'layer-grid');
-  grid.style.setProperty('--cols', String(layout.columnCount));
   const rowLabel = layout.rowVariables || '·';
   const columnLabel = layout.columnVariables || '·';
   grid.append(element('div', 'map-heading corner', `${rowLabel}\\${columnLabel}`));
@@ -112,33 +155,16 @@ function buildLayer(layout, layerIndex, groups) {
     grid.append(element('div', 'map-heading', layout.rowHeaders[row]));
     for (let col = 0; col < layout.columnCount; col += 1) {
       const minterm = positionToMinterm({ layer: layerIndex, row, col }, nVars);
-      const position = mintermToPosition(minterm, nVars);
-      const memberships = groups.flatMap((group, index) => group.minterms.includes(minterm) ? [index] : []);
       const cell = element('button', 'cell');
       cell.type = 'button';
       cell.dataset.minterm = String(minterm);
-      cell.dataset.layer = String(position.layer);
-      cell.setAttribute('aria-label', `Minterm ${minterm}: ${values[minterm] === 2 ? 'don’t care' : values[minterm]}`);
-      cell.setAttribute('aria-pressed', String(values[minterm] !== 0));
-      if (memberships.length) {
-        cell.style.background = cellBackground(memberships);
-      }
-      if (selectedGroup >= 0 && memberships.includes(selectedGroup)) {
-        cell.style.outline = `2px solid ${groupColors[selectedGroup]}`;
-        cell.style.outlineOffset = '-2px';
-      }
-      cell.append(element('span', 'cell-number', String(minterm)));
-      cell.append(element('span', 'cell-value', values[minterm] === 2 ? 'X' : String(values[minterm])));
-      if (memberships.length) {
-        const dots = element('span', 'cell-dots');
-        dots.setAttribute('aria-hidden', 'true');
-        for (const index of memberships) {
-          const dot = element('i', 'cell-dot');
-          dot.style.backgroundColor = groupColors[index];
-          dots.append(dot);
-        }
-        cell.append(dots);
-      }
+      const fill = element('span', 'cell-fill');
+      const fade = element('span', 'cell-fade');
+      const value = element('span', 'cell-value');
+      const dots = element('span', 'cell-dots');
+      dots.setAttribute('aria-hidden', 'true');
+      cell.append(fill, fade, element('span', 'cell-number', String(minterm)), value, dots);
+      mapCells[minterm] = { cell, fill, fade, value, dots, colors: '' };
       grid.append(cell);
     }
   }
@@ -146,11 +172,12 @@ function buildLayer(layout, layerIndex, groups) {
   return layer;
 }
 
-function buildMap(layout, groups) {
+function buildMap(layout) {
   map.replaceChildren();
+  mapCells = [];
   map.dataset.vars = String(nVars);
   layout.layerHeaders.forEach((_, index) => {
-    const layer = buildLayer(layout, index, groups);
+    const layer = buildLayer(layout, index);
     const position = layout.layerPositions[index];
     if (layout.layerCount === 4) {
       layer.style.setProperty('--layer-row', String(position.row + 1));
@@ -160,17 +187,52 @@ function buildMap(layout, groups) {
   });
 }
 
+function updateMap(groups, animate) {
+  const memberships = values.map(() => []);
+  for (const group of groups) {
+    for (const minterm of group.minterms) memberships[minterm].push(groupColors.get(group.term));
+  }
+  const highlightedGroup = groups[selectedGroup];
+  mapCells.forEach((state, minterm) => {
+    const { cell, fill, fade, value, dots } = state;
+    const output = values[minterm];
+    value.textContent = output === 2 ? 'X' : String(output);
+    cell.setAttribute('aria-label', `Minterm ${minterm}: ${output === 2 ? 'don’t care' : output}`);
+    cell.style.setProperty('--highlight', highlightedGroup?.minterms.includes(minterm)
+      ? groupColors.get(highlightedGroup.term) : 'transparent');
+
+    const colors = memberships[minterm].sort();
+    const key = colors.join(',');
+    if (state.colors === key) return;
+    if (animate) {
+      tintAnimations.get(fade)?.cancel();
+      fade.style.background = fill.style.background || 'var(--bg)';
+      const animation = fade.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 180, easing: 'ease-out' });
+      tintAnimations.set(fade, animation);
+    }
+    fill.style.background = cellBackground(colors);
+    dots.replaceChildren(...colors.map(color => {
+      const dot = element('i', 'cell-dot');
+      dot.style.backgroundColor = color;
+      return dot;
+    }));
+    state.colors = key;
+  });
+}
+
 function buildLegend(groups) {
   legend.replaceChildren();
+  groupHint.textContent = groups.length
+    ? 'Select a group to highlight its cells on the map.'
+    : `There are no ${form === 'SOP' ? '1s' : '0s'} to group.`;
   groups.forEach((group, index) => {
     const row = element('button', 'legend-row');
     row.type = 'button';
     row.dataset.group = String(index);
     row.setAttribute('aria-pressed', String(selectedGroup === index));
     row.setAttribute('aria-label', `${displayExpression(group.term)}, covers ${group.minterms.length} cell${group.minterms.length === 1 ? '' : 's'}`);
-    if (selectedGroup === index) row.style.borderColor = groupColors[index];
+    row.style.setProperty('--group-color', groupColors.get(group.term));
     const swatch = element('span', 'legend-swatch');
-    swatch.style.backgroundColor = groupColors[index];
     row.append(swatch, element('span', 'legend-term', displayExpression(group.term)));
     row.append(element('span', 'legend-count', `covers ${group.minterms.length} cell${group.minterms.length === 1 ? '' : 's'}`));
     legend.append(row);
@@ -182,7 +244,7 @@ function buildTruthTable() {
   const head = element('thead');
   const headerRow = element('tr');
   for (let index = 0; index < nVars; index += 1) headerRow.append(element('th', '', 'ABCDEF'[index]));
-  headerRow.append(element('th', '', 'F'));
+  headerRow.append(element('th', '', 'F out'));
   head.append(headerRow);
   truthTable.append(head);
   const body = element('tbody');
@@ -195,6 +257,7 @@ function buildTruthTable() {
     const button = element('button', 'truth-value', value === 2 ? 'X' : String(value));
     button.type = 'button';
     button.dataset.truthMinterm = String(minterm);
+    button.dataset.value = String(value);
     button.setAttribute('aria-label', `Minterm ${minterm}, output ${value === 2 ? 'don’t care' : value}`);
     valueCell.append(button);
     row.append(valueCell);
@@ -205,91 +268,54 @@ function buildTruthTable() {
 
 function buildExplanation(groups) {
   explanation.replaceChildren();
-  const panel = document.querySelector('#explanation-panel');
-  if (selectedGroup < 0 || !groups[selectedGroup]) {
-    explanation.append(element('p', '', 'Tap a group in the legend to see which variables it keeps and why the others drop out.'));
-    return;
-  }
-  panel.open = true;
-  const group = groups[selectedGroup];
-  explanation.append(element('p', 'explanation-term', `${displayExpression(group.term)} covers ${group.minterms.length} map cell${group.minterms.length === 1 ? '' : 's'}.`));
-  const kept = element('section', 'explanation-section');
-  kept.append(element('h3', '', 'Kept in the term'));
-  if (group.explanation.kept.length === 0) kept.append(element('p', '', 'No variables are needed; this group covers the whole map.'));
-  for (const item of group.explanation.kept) {
-    kept.append(element('p', '', `${item.variable} stays as ${displayExpression(item.literal)} because every cell in this group has ${item.variable} = ${item.value}.`));
-  }
-  const dropped = element('section', 'explanation-section');
-  dropped.append(element('h3', '', 'Dropped from the term'));
-  if (group.explanation.dropped.length === 0) dropped.append(element('p', '', 'No variables drop out in this group.'));
-  for (const item of group.explanation.dropped) {
-    dropped.append(element('p', '', `${item.variable} drops out because the group includes both ${item.variable} = 0 and ${item.variable} = 1.`));
-  }
-  explanation.append(kept, dropped);
-}
+  const chosen = groups[selectedGroup];
+  whyHint.textContent = chosen
+    ? 'Showing the highlighted group. Select it again in Groups to see all groups.'
+    : groups.length
+      ? 'A variable drops out when its value changes within a group.'
+      : `There are no ${form === 'SOP' ? '1s' : '0s'} to group.`;
 
-function sizeMap() {
-  if (!window.matchMedia('(min-width: 900px)').matches) {
-    map.style.removeProperty('--cell');
-    return;
-  }
-  const vars = Number(map.dataset.vars) || nVars;
-  const layersX = vars >= 5 ? 2 : 1;
-  const layersY = vars >= 6 ? 2 : 1;
-  const rows = vars <= 3 ? 2 : 4;
-  const cols = vars === 2 ? 2 : 4;
-  const label = 22;
-  const gap = 3;
-  const headH = 16;
-  const layerGap = 10;
-  const titleH = vars >= 5 ? 22 : 0;
-  const width = map.clientWidth;
-  const height = map.clientHeight;
-  if (width < 2 || height < 2) return;
-  const cellWidth = (width - (layersX - 1) * layerGap - layersX * (label + gap * cols)) / (layersX * cols);
-  const cellHeight = (height - (layersY - 1) * layerGap - layersY * (titleH + headH + gap * rows)) / (layersY * rows);
-  let cell = Math.floor(Math.min(cellWidth, cellHeight) * 2) / 2; // half-pixel slack
-  if (!Number.isFinite(cell)) return;
-  cell = Math.max(16, cell);
-  map.style.setProperty('--cell', `${cell}px`);
-  // If labels or rounding still overflow the box, shrink until every cell fits.
-  void map.offsetHeight;
-  const box = map.getBoundingClientRect();
-  let overflow = 0;
-  map.querySelectorAll('.cell').forEach((node) => {
-    const rect = node.getBoundingClientRect();
-    overflow = Math.max(overflow, rect.right - box.right, rect.bottom - box.bottom, box.left - rect.left, box.top - rect.top);
-  });
-  if (overflow > 0.5) {
-    cell = Math.max(16, Math.floor(cell - Math.ceil(overflow)));
-    map.style.setProperty('--cell', `${cell}px`);
+  for (const group of chosen ? [chosen] : groups) {
+    const card = element('div', 'explanation-group');
+    card.style.setProperty('--group-color', groupColors.get(group.term));
+    const title = element('h4', 'explanation-heading');
+    title.append(element('span', 'legend-swatch'), element('span', '', displayExpression(group.term)));
+    card.append(title);
+
+    const { kept, dropped } = group.explanation;
+    const fixed = kept.map(item => `${item.variable} = ${item.value}`).join(', ');
+    card.append(element('p', '', kept.length ? `Fixed in every cell: ${fixed}.` : 'The group spans all variables.'));
+    if (dropped.length) {
+      const variables = dropped.map(item => item.variable).join(', ');
+      card.append(element('p', '', `Both 0 and 1 occur for ${variables}, so ${dropped.length === 1 ? 'it drops' : 'they drop'} out.`));
+    }
+    explanation.append(card);
   }
 }
 
 function render() {
-  const layout = getLayout(nVars);
   const result = solve(cellsForSolver(), nVars, { form });
-  if (selectedGroup >= result.groups.length) selectedGroup = -1;
-  groupColors = colorsForGroups(result.groups.map((group) => group.term), colorSeed);
-  const focusedMinterm = document.activeElement?.dataset?.minterm;
-  const focusedGroup = document.activeElement?.dataset?.group;
-  const focusedTruth = document.activeElement?.dataset?.truthMinterm;
-  buildMap(layout, result.groups);
-  document.querySelector('#answer-label').textContent = `Minimal ${form}`;
-  expression.textContent = `F = ${displayExpression(result.expression)}`;
+  groupColors = colorsForGroups(result.groups.map(group => group.term), groupColors);
+  const focused = document.activeElement;
+  const focusedGroup = focused?.dataset.group;
+  const focusedTruth = focused?.dataset.truthMinterm;
+  const layoutChanged = map.dataset.vars !== String(nVars);
+  if (layoutChanged) buildMap(getLayout(nVars));
+  updateMap(result.groups, !layoutChanged && !mapPanel.hidden && !reducedMotion.matches);
+  if (layoutChanged && !mapPanel.hidden && !reducedMotion.matches) {
+    map.animate([{ opacity: .65 }, { opacity: 1 }], { duration: 160, easing: 'ease-out' });
+  }
+  const label = `Minimal ${form}`;
+  const formula = `F = ${displayExpression(result.expression)}`;
+  if (answerLabel.textContent !== label) answerLabel.textContent = label;
+  if (expression.textContent !== formula) expression.textContent = formula;
   buildLegend(result.groups);
   mintermList.textContent = result.mintermList;
   buildTruthTable();
   buildExplanation(result.groups);
   document.querySelectorAll('[data-form]').forEach((button) => button.setAttribute('aria-pressed', String(button.dataset.form === form)));
-  document.querySelectorAll('[data-paint]').forEach((button) => {
-    button.setAttribute('aria-pressed', String(Number(button.dataset.paint) === selectedPaint));
-  });
-  document.querySelector('#cycle-mode').setAttribute('aria-pressed', String(cycleTaps));
-  if (focusedMinterm !== undefined) map.querySelector(`[data-minterm="${focusedMinterm}"]`)?.focus();
-  else if (focusedGroup !== undefined) legend.querySelector(`[data-group="${focusedGroup}"]`)?.focus();
-  else if (focusedTruth !== undefined) truthTable.querySelector(`[data-truth-minterm="${focusedTruth}"]`)?.focus();
-  sizeMap();
+  if (focusedGroup !== undefined) legend.querySelector(`[data-group="${focusedGroup}"]`)?.focus({ preventScroll: true });
+  if (focusedTruth !== undefined) truthTable.querySelector(`[data-truth-minterm="${focusedTruth}"]`)?.focus({ preventScroll: true });
   updateUrl();
 }
 
@@ -306,12 +332,23 @@ function paintCell(cell, pointerType) {
   else setCell(minterm, selectedPaint);
 }
 
+showView(narrowLayout.matches ? 'map' : 'groups');
 renderVariableControl();
+updatePaintControls();
 render();
+
+narrowLayout.addEventListener('change', () => {
+  showView(narrowLayout.matches ? 'map' : activeView === 'map' ? 'groups' : activeView);
+});
+touchLayout.addEventListener('change', updatePaintControls);
+viewButtons.forEach(button => button.addEventListener('click', () => {
+  if (activeView === button.dataset.view) return;
+  showView(button.dataset.view, true);
+}));
 
 document.querySelector('.form-control').addEventListener('click', (event) => {
   const button = event.target.closest('[data-form]');
-  if (!button) return;
+  if (!button || button.dataset.form === form) return;
   form = button.dataset.form;
   selectedGroup = -1;
   render();
@@ -325,33 +362,32 @@ truthTable.addEventListener('click', (event) => {
 
 variableControl.addEventListener('click', (event) => {
   const button = event.target.closest('[data-vars]');
-  if (!button) return;
+  if (!button || Number(button.dataset.vars) === nVars) return;
   const focusedCount = button.dataset.vars;
-  nVars = Number(button.dataset.vars);
+  nVars = Number(focusedCount);
+  groupColors = new Map();
   values = Array(2 ** nVars).fill(0);
   selectedGroup = -1;
   renderVariableControl();
+  if (narrowLayout.matches && activeView !== 'map') showView('map', true);
   render();
   variableControl.querySelector(`[data-vars="${focusedCount}"]`)?.focus();
 });
 
-document.querySelector('.paint-control').addEventListener('click', (event) => {
-  const button = event.target.closest('[data-paint]');
-  if (!button) return;
+document.querySelectorAll('[data-paint]').forEach(button => button.addEventListener('click', () => {
   selectedPaint = Number(button.dataset.paint);
   cycleTaps = false;
-  document.querySelectorAll('[data-paint]').forEach((item) => item.setAttribute('aria-pressed', String(item === button)));
-  document.querySelector('#cycle-mode').setAttribute('aria-pressed', 'false');
-});
+  updatePaintControls();
+}));
 
-document.querySelector('#cycle-mode').addEventListener('click', (event) => {
+cycleButton.addEventListener('click', () => {
   cycleTaps = !cycleTaps;
-  event.currentTarget.setAttribute('aria-pressed', String(cycleTaps));
+  updatePaintControls();
 });
 
 map.addEventListener('pointerdown', (event) => {
   const cell = event.target.closest('[data-minterm]');
-  if (!cell) return;
+  if (!cell || event.button !== 0 || !event.isPrimary) return;
   // Touch: wait for a confirmed tap so a scroll starting on a cell
   // does not change the map. Mouse and pen still paint immediately
   // and can drag across cells.
@@ -412,6 +448,10 @@ legend.addEventListener('click', (event) => {
   const group = Number(row.dataset.group);
   selectedGroup = selectedGroup === group ? -1 : group;
   render();
+  if (narrowLayout.matches && selectedGroup !== -1) {
+    showView('map', true);
+    document.querySelector('[data-view="map"]').focus({ preventScroll: true });
+  }
 });
 
 document.querySelector('#randomize').addEventListener('click', () => {
@@ -425,7 +465,3 @@ document.querySelector('#clear').addEventListener('click', () => {
   selectedGroup = -1;
   render();
 });
-
-const mapResize = new ResizeObserver(() => sizeMap());
-mapResize.observe(map);
-window.addEventListener('resize', sizeMap);

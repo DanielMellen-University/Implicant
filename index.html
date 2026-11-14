@@ -5,76 +5,109 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="theme-color" content="#1f1e1d">
     <title>Implicant — Interactive Karnaugh map solver</title>
-    <link rel="stylesheet" href="./styles.css">
-    <script type="module" src="./ui.js"></script>
+    <link rel="stylesheet" href="./styles.css?v=2">
+    <script type="module" src="./ui.js?v=2"></script>
   </head>
   <body>
     <main class="app">
       <header class="topbar">
-        <div class="brand"><h1>Implicant</h1><p class="subtitle">Interactive Karnaugh map solver</p></div>
-        <div class="top-controls">
-          <fieldset class="segmented variable-control" aria-label="Variable count">
-            <legend>Variables</legend>
-            <div id="variable-count" class="segment-row"></div>
-          </fieldset>
-          <fieldset class="segmented paint-control" aria-label="Paint value">
-            <legend>Paint value</legend>
-            <div class="segment-row">
-              <button type="button" data-paint="0" aria-pressed="true">0</button>
-              <button type="button" data-paint="1" aria-pressed="false">1</button>
-              <button type="button" data-paint="2" aria-pressed="false">X</button>
-            </div>
-          </fieldset>
-          <button id="cycle-mode" class="cycle-mode" type="button" aria-pressed="true">Cycle taps</button>
-          <nav class="map-actions" aria-label="Map actions">
-            <button id="randomize" type="button">Randomize</button>
-            <button id="clear" type="button">Clear</button>
-          </nav>
+        <div class="brand">
+          <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+          <div><h1>Implicant</h1><p class="subtitle">Interactive Karnaugh map solver</p></div>
         </div>
+        <fieldset class="segmented variable-control">
+          <legend>Variables</legend>
+          <div id="variable-count" class="segment-row"></div>
+        </fieldset>
       </header>
 
-      <section class="workspace" aria-label="Karnaugh map and solution">
-        <section class="map-section" aria-label="Karnaugh map">
-          <div id="kmap" class="kmap" role="group" aria-label="Karnaugh map"></div>
-          <p id="map-hint" class="hint">Choose a value to paint; touch taps cycle unless a paint value is selected.</p>
+      <div class="workspace">
+        <section id="map-panel" class="map-panel" aria-labelledby="map-title">
+          <div class="map-header">
+            <h2 id="map-title">Karnaugh map</h2>
+            <div class="map-actions" role="group" aria-label="Map actions">
+              <button id="randomize" type="button">Randomize</button>
+              <button id="clear" type="button">Clear</button>
+            </div>
+          </div>
+
+          <div class="map-tools">
+            <fieldset class="segmented paint-control">
+              <legend>Paint</legend>
+              <div class="segment-row">
+                <button type="button" data-paint="0" aria-label="Paint zero" aria-pressed="true">0</button>
+                <button type="button" data-paint="1" aria-label="Paint one" aria-pressed="false">1</button>
+                <button type="button" data-paint="2" aria-label="Paint don't care" aria-pressed="false">X</button>
+              </div>
+            </fieldset>
+            <button id="cycle-mode" class="cycle-mode" type="button" aria-pressed="true">Cycle taps</button>
+          </div>
+
+          <div class="map-stage">
+            <div id="kmap" class="kmap" role="group" aria-label="Karnaugh map cells"></div>
+          </div>
+          <p id="map-hint" class="hint"></p>
         </section>
 
-        <div class="side">
-          <aside class="solution">
-            <section class="answer" aria-live="polite" aria-atomic="true">
-              <div class="answer-heading">
-                <div id="answer-label" class="answer-label">Minimal SOP</div>
-                <fieldset class="segmented form-control" aria-label="Expression form">
-                  <legend>Expression form</legend>
-                  <div class="segment-row">
-                    <button type="button" data-form="SOP" aria-pressed="true">SOP</button>
-                    <button type="button" data-form="POS" aria-pressed="false">POS</button>
-                  </div>
-                </fieldset>
-              </div>
-              <div id="expression" class="expression">F = 0</div>
-            </section>
-            <section id="legend" class="legend" aria-label="Selected groups"></section>
-          </aside>
-          <section class="extras" aria-label="Solver details">
-            <details class="extra-panel">
-              <summary>Minterm list</summary>
-              <p id="minterm-list" class="detail-copy"></p>
-            </details>
-            <details class="extra-panel">
-              <summary>Truth table</summary>
-              <div class="truth-table-scroll">
-                <table id="truth-table" class="truth-table"></table>
-              </div>
-              <p class="detail-note">Select a row’s F value to set it to the chosen paint value.</p>
-            </details>
-            <details id="explanation-panel" class="extra-panel">
-              <summary>Why these groups work</summary>
-              <div id="explanation" class="detail-copy"></div>
-            </details>
+        <aside class="solution" aria-labelledby="solution-title">
+          <section class="answer">
+            <div class="answer-heading">
+              <h2 id="solution-title">Solution</h2>
+              <fieldset class="segmented form-control" aria-label="Expression form">
+                <legend class="visually-hidden">Expression form</legend>
+                <div class="segment-row">
+                  <button type="button" data-form="SOP" aria-pressed="true">SOP</button>
+                  <button type="button" data-form="POS" aria-pressed="false">POS</button>
+                </div>
+              </fieldset>
+            </div>
+            <div class="answer-result" aria-live="polite" aria-atomic="true">
+              <p id="answer-label" class="answer-label">Minimal SOP</p>
+              <p id="expression" class="expression">F = 0</p>
+            </div>
           </section>
-        </div>
-      </section>
+
+          <div class="views" role="group" aria-label="Solver views">
+            <button class="map-view" type="button" data-view="map" aria-controls="map-panel" aria-pressed="false">Map</button>
+            <button type="button" data-view="groups" aria-controls="groups-panel" aria-pressed="true">Groups</button>
+            <button type="button" data-view="minterms" aria-controls="minterms-panel" aria-pressed="false">Minterms</button>
+            <button type="button" data-view="truth" aria-controls="truth-panel" aria-pressed="false">Truth table</button>
+            <button type="button" data-view="why" aria-controls="why-panel" aria-pressed="false">Why groups?</button>
+          </div>
+
+          <section id="groups-panel" class="detail-view" aria-label="Selected groups">
+            <p id="group-hint" class="detail-hint">Select a group to highlight its cells.</p>
+            <div id="legend" class="legend"></div>
+          </section>
+
+          <section id="minterms-panel" class="detail-view" aria-labelledby="minterms-title" hidden>
+            <h3 id="minterms-title">Minterm list</h3>
+            <p class="detail-hint">Input combinations with output 1 and any don’t-care values.</p>
+            <p id="minterm-list" class="minterm-list"></p>
+          </section>
+
+          <section id="truth-panel" class="detail-view" aria-label="Truth table" hidden>
+            <p id="truth-hint" class="detail-hint"></p>
+            <fieldset class="segmented truth-paint">
+              <legend>Paint output</legend>
+              <div class="segment-row">
+                <button type="button" data-paint="0" aria-label="Paint output zero" aria-pressed="true">0</button>
+                <button type="button" data-paint="1" aria-label="Paint output one" aria-pressed="false">1</button>
+                <button type="button" data-paint="2" aria-label="Paint output don't care" aria-pressed="false">X</button>
+              </div>
+            </fieldset>
+            <div class="truth-table-scroll" tabindex="0" role="region" aria-label="Truth table rows">
+              <table id="truth-table" class="truth-table"></table>
+            </div>
+          </section>
+
+          <section id="why-panel" class="detail-view" aria-labelledby="why-title" hidden>
+            <h3 id="why-title">Why these groups work</h3>
+            <p id="why-hint" class="detail-hint"></p>
+            <div id="explanation" class="explanation"></div>
+          </section>
+        </aside>
+      </div>
     </main>
   </body>
 </html>

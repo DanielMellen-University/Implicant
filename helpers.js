@@ -149,30 +149,17 @@ export function minPairwiseDeltaE(hexes) {
   return hexes.length < 2 ? Infinity : min;
 }
 
-function hashTerm(term, seed) {
-  let hash = seed >>> 0;
-  const text = String(term);
-  for (let i = 0; i < text.length; i += 1) {
-    hash = Math.imul(hash ^ text.charCodeAt(i), 2654435761);
+/** Keep colors for terms still in the solution and reuse freed colors. */
+export function colorsForGroups(terms, previous = new Map()) {
+  const colors = new Map();
+  for (const term of terms) {
+    if (previous.has(term)) colors.set(term, previous.get(term));
   }
-  return hash >>> 0;
-}
-
-/**
- * Colors for a list of group terms. Picks the N most mutually distant
- * palette colors, then assigns them with a stable per-term hash so the
- * same term keeps its color within a page load, but the first group is
- * not always the same hue.
- */
-export function colorsForGroups(terms, seed) {
-  const n = terms.length;
-  const spread = pickSpread(GROUP_PALETTE, n);
-  const ranked = terms.map((term, index) => ({ term, index, hash: hashTerm(term, seed) }));
-  ranked.sort((a, b) => a.hash - b.hash || String(a.term).localeCompare(String(b.term)) || a.index - b.index);
-  const colors = Array(n);
-  ranked.forEach((item, order) => {
-    colors[item.index] = spread[order];
-  });
+  const inUse = new Set(colors.values());
+  const available = GROUP_PALETTE.filter(color => !inUse.has(color));
+  for (const term of terms) {
+    if (!colors.has(term)) colors.set(term, available.shift());
+  }
   return colors;
 }
 

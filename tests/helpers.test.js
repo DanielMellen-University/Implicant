@@ -57,19 +57,17 @@ test('group palettes stay perceptually distinct up to 32 colors', () => {
   }
 });
 
-test('colorsForGroups is stable per term within a seed and shuffled across seeds', () => {
-  const terms = ["A'C'E", 'BDE', "C'F", 'ADF'];
-  const first = colorsForGroups(terms, 20261113);
-  const reordered = colorsForGroups([...terms].reverse(), 20261113).reverse();
-  assert.deepEqual(reordered, first);
-  assert.equal(new Set(first).size, terms.length);
-  assert.deepEqual([...first].sort(), [...pickSpread(GROUP_PALETTE, terms.length)].sort());
+test('group colors persist through edits that add, remove, or reorder terms', () => {
+  const terms = ["A'C'E", 'BDE', "C'F"];
+  const initial = colorsForGroups(terms);
+  assert.deepEqual(colorsForGroups(terms), initial);
 
-  const permutations = new Set();
-  for (let seed = 1; seed <= 40; seed += 1) {
-    permutations.add(colorsForGroups(terms, seed).join(','));
-  }
-  assert.ok(permutations.size >= 8, `expected several assignments, got ${permutations.size}`);
+  const edited = colorsForGroups(['ADF', "C'F", 'BDE', 'ABC'], initial);
+  assert.equal(edited.get("C'F"), initial.get("C'F"));
+  assert.equal(edited.get('BDE'), initial.get('BDE'));
+  assert.equal(edited.get('ADF'), initial.get("A'C'E"));
+  assert.equal(edited.has("A'C'E"), false);
+  assert.equal(new Set(edited.values()).size, edited.size);
 });
 
 test('the solver stays fast on a 6-variable map with about one third X cells', () => {
