@@ -1,34 +1,20 @@
-import { solve } from './solver.js';
+import { getLayout, mintermToPosition, positionToMinterm, solve } from './solver.js';
 
 const GROUP_COLORS = ['#7F77DD', '#1D9E75', '#D85A30', '#378ADD', '#BA7517', '#D4537E', '#639922', '#888780'];
-const GRAY_ORDER = [0, 1, 3, 2];
-const PRESETS = {
-  corners: { ones: [0, 2, 8, 10], dontCares: [] },
-  'two-groups': { ones: [0, 2, 5, 7, 8, 10, 13, 15], dontCares: [] },
-  'dont-cares': { ones: [1, 3, 7, 11, 15], dontCares: [0, 2, 5] },
-  concept: { ones: [0, 1, 4, 5, 6, 8, 9, 10, 11], dontCares: [] },
-  clear: { ones: [], dontCares: [] },
-};
-
-
-function cellsForSolver(values) {
-  return values.map((value) => (value === 2 ? 'X' : value));
-}
-
-function displayExpression(expression) {
-  return expression.replaceAll("'", '′');
-}
-
-let values = Array(16).fill(0);
+const initialValues = [1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0];
+let nVars = 4;
+let values = [...initialValues];
 let selectedGroup = -1;
+let selectedPaint = 0;
+let activeLayer = 0;
+let paintingPointer = null;
+let cycleTaps = true;
 
 const map = document.querySelector('#kmap');
 const expression = document.querySelector('#expression');
 const legend = document.querySelector('#legend');
-const themeToggle = document.querySelector('#theme-toggle');
-const initialTheme = document.documentElement.dataset.theme ||
-  (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-themeToggle.setAttribute('aria-label', `Switch to ${initialTheme === 'dark' ? 'light' : 'dark'} theme`);
+const variableControl = document.querySelector('#variable-count');
+const layerTabs = document.querySelector('#layer-tabs');
 
 function element(tag, className, text) {
   const node = document.createElement(tag);
@@ -37,19 +23,70 @@ function element(tag, className, text) {
   return node;
 }
 
-function buildMap(groups) {
-  map.replaceChildren();
-  map.append(element('div', 'map-heading corner', 'AB\\CD'));
-  for (const column of GRAY_ORDER) map.append(element('div', 'map-heading', column.toString(2).padStart(2, '0')));
+function cellsForSolver() {
+  return values.map((value) => (value === 2 ? 'X' : value));
+}
 
-  for (const row of GRAY_ORDER) {
-    map.append(element('div', 'map-heading', row.toString(2).padStart(2, '0')));
-    for (const column of GRAY_ORDER) {
-      const minterm = row * 4 + column;
+function displayExpression(value) {
+  return value.replaceAll("'", '′');
+}
+
+function renderVariableControl() {
+  variableControl.replaceChildren();
+  for (let count = 2; count <= 6; count += 1) {
+    const button = element('button', '', String(count));
+    button.type = 'button';
+    button.dataset.vars = String(count);
+    button.setAttribute('aria-pressed', String(count === nVars));
+    variableControl.append(button);
+  }
+}
+
+function renderLayerTabs(layout, outlinedLayers) {
+  layerTabs.replaceChildren();
+  const hasLayers = layout.layerCount > 1;
+  layerTabs.classList.toggle('has-tabs', hasLayers);
+  if (!hasLayers) return;
+  layout.layerHeaders.forEach((header, index) => {
+    const tab = element('button', 'layer-tab', `${layout.layerVariables}=${header}`);
+    tab.type = 'button';
+    tab.dataset.layerTab = String(index);
+    tab.setAttribute('role', 'tab');
+    tab.setAttribute('aria-selected', String(index === activeLayer));
+    tab.setAttribute('aria-label', `Show layer ${layout.layerVariables} equals ${header}`);
+    if (outlinedLayers.has(index)) tab.classList.add('has-outline');
+    layerTabs.append(tab);
+  });
+}
+
+function buildLayer(layout, layerIndex, groups) {
+  const layer = element('section', 'map-layer');
+  layer.dataset.layer = String(layerIndex);
+  layer.setAttribute('aria-label', layout.layerCount === 1 ? 'Karnaugh map' : `${layout.layerVariables} = ${layout.layerHeaders[layerIndex]} layer`);
+  if (layout.layerCount > 1) {
+    layer.append(element('h2', 'layer-title', `${layout.layerVariables} = ${layout.layerHeaders[layerIndex]}`));
+  }
+  if (layerIndex !== activeLayer) layer.hidden = true;
+
+  const grid = element('div', 'layer-grid');
+  grid.style.setProperty('--cols', String(layout.columnCount));
+  const rowLabel = layout.rowVariables || '·';
+  const columnLabel = layout.columnVariables || '·';
+  grid.append(element('div', 'map-heading corner', `${rowLabel}\\${columnLabel}`));
+  for (let col = 0; col < layout.columnCount; col += 1) {
+    grid.append(element('div', 'map-heading', layout.columnHeaders[col]));
+  }
+
+  for (let row = 0; row < layout.rowCount; row += 1) {
+    grid.append(element('div', 'map-heading', layout.rowHeaders[row]));
+    for (let col = 0; col < layout.columnCount; col += 1) {
+      const minterm = positionToMinterm({ layer: layerIndex, row, col }, nVars);
+      const position = mintermToPosition(minterm, nVars);
       const memberships = groups.flatMap((group, index) => group.minterms.includes(minterm) ? [index] : []);
       const cell = element('button', 'cell');
       cell.type = 'button';
       cell.dataset.minterm = String(minterm);
+      cell.dataset.layer = String(position.layer);
       cell.setAttribute('aria-label', `Minterm ${minterm}: ${values[minterm] === 2 ? 'don’t care' : values[minterm]}`);
       cell.setAttribute('aria-pressed', String(values[minterm] !== 0));
       if (memberships.length) {
@@ -59,7 +96,6 @@ function buildMap(groups) {
         cell.style.outline = `2px solid ${GROUP_COLORS[selectedGroup % GROUP_COLORS.length]}`;
         cell.style.outlineOffset = '-2px';
       }
-
       cell.append(element('span', 'cell-number', String(minterm)));
       cell.append(element('span', 'cell-value', values[minterm] === 2 ? 'X' : String(values[minterm])));
       if (memberships.length) {
@@ -72,9 +108,25 @@ function buildMap(groups) {
         }
         cell.append(dots);
       }
-      map.append(cell);
+      grid.append(cell);
     }
   }
+  layer.append(grid);
+  return layer;
+}
+
+function buildMap(layout, groups) {
+  map.replaceChildren();
+  map.dataset.vars = String(nVars);
+  layout.layerHeaders.forEach((_, index) => {
+    const layer = buildLayer(layout, index, groups);
+    const position = layout.layerPositions[index];
+    if (layout.layerCount === 4) {
+      layer.style.gridRow = String(position.row + 1);
+      layer.style.gridColumn = String(position.col + 1);
+    }
+    map.append(layer);
+  });
 }
 
 function buildLegend(groups) {
@@ -95,27 +147,99 @@ function buildLegend(groups) {
 }
 
 function render() {
-  const result = solve(cellsForSolver(values), 4);
+  const layout = getLayout(nVars);
+  const result = solve(cellsForSolver(), nVars);
   if (selectedGroup >= result.groups.length) selectedGroup = -1;
   const focusedMinterm = document.activeElement?.dataset?.minterm;
   const focusedGroup = document.activeElement?.dataset?.group;
-  buildMap(result.groups);
+  const focusedTab = document.activeElement?.dataset?.layerTab;
+  const outlinedLayers = new Set();
+  if (selectedGroup >= 0) {
+    for (const minterm of result.groups[selectedGroup].minterms) outlinedLayers.add(mintermToPosition(minterm, nVars).layer);
+  }
+  buildMap(layout, result.groups);
+  renderLayerTabs(layout, outlinedLayers);
   expression.textContent = `F = ${displayExpression(result.expression)}`;
   buildLegend(result.groups);
-  if (focusedMinterm !== undefined) {
-    map.querySelector(`[data-minterm="${focusedMinterm}"]`)?.focus();
-  } else if (focusedGroup !== undefined) {
-    legend.querySelector(`[data-group="${focusedGroup}"]`)?.focus();
-  }
+  document.querySelectorAll('[data-paint]').forEach((button) => {
+    button.setAttribute('aria-pressed', String(Number(button.dataset.paint) === selectedPaint));
+  });
+  document.querySelector('#cycle-mode').setAttribute('aria-pressed', String(cycleTaps));
+  if (focusedMinterm !== undefined) map.querySelector(`[data-minterm="${focusedMinterm}"]`)?.focus();
+  else if (focusedGroup !== undefined) legend.querySelector(`[data-group="${focusedGroup}"]`)?.focus();
+  else if (focusedTab !== undefined) layerTabs.querySelector(`[data-layer-tab="${focusedTab}"]`)?.focus();
 }
 
-map.addEventListener('click', (event) => {
-  const cell = event.target.closest('[data-minterm]');
-  if (!cell) return;
-  const minterm = Number(cell.dataset.minterm);
-  values[minterm] = (values[minterm] + 1) % 3;
+function setCell(minterm, value) {
+  if (values[minterm] === value) return;
+  values[minterm] = value;
   selectedGroup = -1;
   render();
+}
+
+function paintCell(cell, pointerType) {
+  const minterm = Number(cell.dataset.minterm);
+  if (pointerType === 'touch' && cycleTaps) setCell(minterm, (values[minterm] + 1) % 3);
+  else setCell(minterm, selectedPaint);
+}
+
+renderVariableControl();
+render();
+
+variableControl.addEventListener('click', (event) => {
+  const button = event.target.closest('[data-vars]');
+  if (!button) return;
+  nVars = Number(button.dataset.vars);
+  values = Array(2 ** nVars).fill(0);
+  activeLayer = 0;
+  selectedGroup = -1;
+  renderVariableControl();
+  render();
+});
+
+document.querySelector('.paint-control').addEventListener('click', (event) => {
+  const button = event.target.closest('[data-paint]');
+  if (!button) return;
+  selectedPaint = Number(button.dataset.paint);
+  cycleTaps = false;
+  document.querySelectorAll('[data-paint]').forEach((item) => item.setAttribute('aria-pressed', String(item === button)));
+  document.querySelector('#cycle-mode').setAttribute('aria-pressed', 'false');
+});
+
+document.querySelector('#cycle-mode').addEventListener('click', (event) => {
+  cycleTaps = !cycleTaps;
+  event.currentTarget.setAttribute('aria-pressed', String(cycleTaps));
+});
+
+layerTabs.addEventListener('click', (event) => {
+  const tab = event.target.closest('[data-layer-tab]');
+  if (!tab) return;
+  activeLayer = Number(tab.dataset.layerTab);
+  render();
+});
+
+map.addEventListener('pointerdown', (event) => {
+  const cell = event.target.closest('[data-minterm]');
+  if (!cell) return;
+  paintingPointer = event.pointerId;
+  paintCell(cell, event.pointerType);
+  if (event.pointerType !== 'touch') event.preventDefault();
+});
+
+map.addEventListener('pointerover', (event) => {
+  if (paintingPointer === null || !event.buttons) return;
+  const cell = event.target.closest('[data-minterm]');
+  if (cell) paintCell(cell, event.pointerType);
+});
+
+window.addEventListener('pointerup', () => { paintingPointer = null; });
+window.addEventListener('pointercancel', () => { paintingPointer = null; });
+
+map.addEventListener('click', (event) => {
+  // Keep keyboard activation available; pointer input is handled above.
+  if (event.detail !== 0) return;
+  const cell = event.target.closest('[data-minterm]');
+  if (cell) setCell(Number(cell.dataset.minterm), selectedPaint);
 });
 
 legend.addEventListener('click', (event) => {
@@ -126,27 +250,17 @@ legend.addEventListener('click', (event) => {
   render();
 });
 
-document.querySelector('.presets').addEventListener('click', (event) => {
-  const button = event.target.closest('[data-preset]');
-  if (!button) return;
-  const preset = PRESETS[button.dataset.preset];
-  values = Array(16).fill(0);
-  for (const minterm of preset.ones) values[minterm] = 1;
-  for (const minterm of preset.dontCares) values[minterm] = 2;
+document.querySelector('#randomize').addEventListener('click', () => {
+  values = Array.from({ length: 2 ** nVars }, () => Math.random() < 0.48 ? 1 : 0);
+  const xCount = Math.min(4, Math.max(1, Math.round(values.length * 0.045)));
+  const xCells = values.map((_, minterm) => minterm).sort(() => Math.random() - 0.5).slice(0, xCount);
+  for (const minterm of xCells) values[minterm] = 2;
   selectedGroup = -1;
   render();
 });
 
-themeToggle.addEventListener('click', () => {
-  const current = document.documentElement.dataset.theme ||
-    (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-  const next = current === 'dark' ? 'light' : 'dark';
-  document.documentElement.dataset.theme = next;
-  themeToggle.setAttribute('aria-label', `Switch to ${next === 'dark' ? 'light' : 'dark'} theme`);
+document.querySelector('#clear').addEventListener('click', () => {
+  values = Array(2 ** nVars).fill(0);
+  selectedGroup = -1;
+  render();
 });
-
-values = [...PRESETS['two-groups'].ones].reduce((state, minterm) => {
-  state[minterm] = 1;
-  return state;
-}, Array(16).fill(0));
-render();
