@@ -310,7 +310,18 @@ function render() {
   const label = `Minimal ${form}`;
   const formula = `F = ${displayExpression(result.expression)}`;
   if (answerLabel.textContent !== label) answerLabel.textContent = label;
-  if (expression.textContent !== formula) expression.textContent = formula;
+  if (expression.textContent !== formula) {
+    expression.toggleAttribute('data-long', result.termCount > 8);
+    if (form === 'POS' && result.termCount > 1) {
+      expression.replaceChildren('F = ');
+      result.groups.forEach((group, index) => {
+        if (index > 0) expression.append(element('wbr'));
+        expression.append(element('span', 'expression-factor', displayExpression(group.term)));
+      });
+    } else {
+      expression.textContent = formula;
+    }
+  }
   buildLegend(result.groups);
   mintermList.textContent = result.mintermList;
   buildTruthTable();

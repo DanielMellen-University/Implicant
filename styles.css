@@ -276,11 +276,11 @@ h2 { font-size: 17px; font-weight: 650; letter-spacing: -.02em; }
 .answer-label { color: var(--accent); font-size: 12px; font-weight: 600; }
 .expression {
   margin-top: 4px;
-  max-height: 8lh;
-  overflow: auto;
   overflow-wrap: anywhere;
   font: 500 clamp(17px, 1.55vw, 23px)/1.5 var(--mono);
 }
+.expression[data-long] { font-size: clamp(14px, 1.25vw, 17px); }
+.expression-factor { display: inline-block; max-width: 100%; }
 .views {
   display: flex;
   flex-wrap: wrap;
@@ -352,9 +352,9 @@ h2 { font-size: 17px; font-weight: 650; letter-spacing: -.02em; }
 .truth-value:focus-visible { outline-offset: -3px; }
 
 @media (min-width: 880px) and (min-height: 580px) {
-  .app { height: 100dvh; }
+  .app { min-height: 100dvh; }
   .workspace { flex: 1; align-items: stretch; }
-  .map-stage { flex: 1; min-height: 0; container-type: size; }
+  .map-stage { flex: 1; min-height: 350px; container-type: size; }
   .kmap {
     --available-height: calc((100cqh - (var(--layers-y) - 1) * var(--layer-gap)) / var(--layers-y));
     --height-cell: calc((var(--available-height) - var(--heading)) / var(--rows) - var(--gap));
@@ -363,7 +363,7 @@ h2 { font-size: 17px; font-weight: 650; letter-spacing: -.02em; }
   .kmap:is([data-vars="5"], [data-vars="6"]) {
     --height-cell: calc((var(--available-height) - var(--heading) - var(--title)) / var(--rows) - var(--gap));
   }
-  .expression { max-height: 5lh; }
+  .detail-view { contain: size; min-height: 124px; }
   .truth-table-scroll { max-height: none; }
 }
 
@@ -385,7 +385,6 @@ h2 { font-size: 17px; font-weight: 650; letter-spacing: -.02em; }
   .kmap { --gap: 4px; --layer-gap: 10px; --title: 20px; --heading: 18px; }
   .answer { padding: 12px; }
   .answer-result { margin-top: 8px; padding: 8px 12px; }
-  .expression { max-height: 4lh; }
 }
 
 @media (max-width: 879px) {
@@ -404,7 +403,6 @@ h2 { font-size: 17px; font-weight: 650; letter-spacing: -.02em; }
     border-radius: var(--radius) var(--radius) 0 0;
     background: var(--surface);
   }
-  .expression { max-height: 4lh; }
   .views {
     position: sticky;
     top: env(safe-area-inset-top, 0px);
