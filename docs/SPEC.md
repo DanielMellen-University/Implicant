@@ -41,7 +41,7 @@ Every axis uses Gray-code headers. Map cells use `positionToMinterm` and `minter
 
 ## Visualization
 
-- Cell fills identify values: slate for 0, teal for 1, and amber for X. Group colors stay assigned while a term remains in the solution. A strip along the bottom of each grouped cell shows one segment per membership.
+- Each group has a muted cell fill and a matching dot. A cell that belongs to multiple groups splits its fill into equal segments. Group colors stay assigned while a term remains in the solution.
 - The legend shows a swatch, term, and covered cell count. Selecting a legend row outlines its cells, including cells on other layers.
 - 5- and 6-variable maps always show every layer, each with a small label above it (A=0 / A=1, or AB=00 and the other Gray-code labels). On a wide screen, 5-variable layers sit side by side and 6-variable layers use a 2×2 Gray-code arrangement. On a phone, the layers stack vertically. There are no layer tab buttons.
 

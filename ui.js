@@ -74,12 +74,13 @@ function element(tag, className, text) {
   return node;
 }
 
-function groupBand(colors) {
-  if (colors.length <= 1) return colors[0] ?? '';
-  const stops = colors.map((color, index) => {
+function groupFill(colors) {
+  const tints = colors.map(color => `color-mix(in srgb, var(--stage), ${color} 38%)`);
+  if (tints.length <= 1) return tints[0] ?? '';
+  const stops = tints.map((tint, index) => {
     const start = (index / colors.length) * 100;
     const end = ((index + 1) / colors.length) * 100;
-    return `${color} ${start}% ${end}%`;
+    return `${tint} ${start}% ${end}%`;
   });
   return `linear-gradient(to right, ${stops.join(', ')})`;
 }
@@ -159,8 +160,10 @@ function buildLayer(layout, layerIndex) {
       const fill = element('span', 'cell-fill');
       const fade = element('span', 'cell-fade');
       const value = element('span', 'cell-value');
-      cell.append(fill, fade, element('span', 'cell-number', String(minterm)), value);
-      mapCells[minterm] = { cell, fill, fade, value, colors: '' };
+      const dots = element('span', 'cell-dots');
+      dots.setAttribute('aria-hidden', 'true');
+      cell.append(fill, fade, element('span', 'cell-number', String(minterm)), value, dots);
+      mapCells[minterm] = { cell, fill, fade, value, dots, colors: '' };
       grid.append(cell);
     }
   }
@@ -190,32 +193,31 @@ function updateMap(groups, animate) {
   }
   const highlightedGroup = groups[selectedGroup];
   mapCells.forEach((state, minterm) => {
-    const { cell, fill, fade, value } = state;
+    const { cell, fill, fade, value, dots } = state;
     const output = values[minterm];
+    const colors = memberships[minterm].sort();
+    const key = colors.join(',');
+    if (animate && state.colors !== key) {
+      tintAnimations.get(fade)?.cancel();
+      fade.style.background = fill.style.background || getComputedStyle(cell).backgroundColor;
+      tintAnimations.set(fade, fade.animate(
+        [{ opacity: 1 }, { opacity: 0 }], { duration: 180, easing: 'ease-out' },
+      ));
+    }
     cell.dataset.value = String(output);
     value.textContent = output === 2 ? 'X' : String(output);
     cell.setAttribute('aria-label', `Minterm ${minterm}: ${output === 2 ? 'don’t care' : output}`);
     cell.style.setProperty('--highlight', highlightedGroup?.minterms.includes(minterm)
       ? groupColors.get(highlightedGroup.term) : 'transparent');
 
-    const colors = memberships[minterm].sort();
-    const key = colors.join(',');
     if (state.colors === key) return;
-    if (animate) {
-      tintAnimations.get(fade)?.cancel();
-      const oldBand = fill.style.background;
-      if (oldBand) {
-        fade.style.background = oldBand;
-        tintAnimations.set(fade, fade.animate(
-          [{ opacity: 1 }, { opacity: 0 }], { duration: 180, easing: 'ease-out' },
-        ));
-      } else {
-        tintAnimations.set(fade, fill.animate(
-          [{ opacity: 0 }, { opacity: 1 }], { duration: 180, easing: 'ease-out' },
-        ));
-      }
-    }
-    fill.style.background = groupBand(colors);
+    cell.toggleAttribute('data-grouped', colors.length > 0);
+    fill.style.background = groupFill(colors);
+    dots.replaceChildren(...colors.map(color => {
+      const dot = element('span', 'cell-dot');
+      dot.style.backgroundColor = color;
+      return dot;
+    }));
     state.colors = key;
   });
 }

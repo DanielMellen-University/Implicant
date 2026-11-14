@@ -16,7 +16,7 @@ Live demo: [danielmellen-university.github.io/Implicant](https://danielmellen-un
 - Maps for 2 through 6 variables, including two-layer 5-variable maps and four-layer 6-variable maps
 - A 0 / 1 / X paint selector, with tap-to-cycle on touch screens
 - Live minimal SOP or POS, with a unique color for every group
-- Slate 0s, teal 1s, and amber Xs, with split color strips for overlapping groups
+- Muted group fills with full-cell splits and colored dots for overlapping groups
 - A legend that outlines a group's cells, a minterm list, a truth table synced both ways with the map, and per-group explanations
 - Randomize (each cell independently 0, 1, or X) and Clear
 - A shareable URL that restores the current map
