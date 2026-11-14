@@ -65,6 +65,84 @@ function assertValidSolution(cells, nVars, result) {
   }
 }
 
+// Independent oracle: enumerate ALL 3^n cubes directly as ternary strings,
+// without QM merging, primes, essentials, dominance, or solver internals.
+function enumerateOracleCubes(nVars) {
+  const cubes = [];
+  for (let code = 0; code < 3 ** nVars; code += 1) {
+    let digits = code;
+    const pattern = [];
+    let literals = 0;
+    for (let variable = 0; variable < nVars; variable += 1) {
+      const digit = digits % 3;
+      digits = Math.floor(digits / 3);
+      pattern.push(digit); // 0/1 are fixed; 2 means either value.
+      if (digit !== 2) literals += 1;
+    }
+    let coverage = 0;
+    for (let minterm = 0; minterm < 2 ** nVars; minterm += 1) {
+      const matches = pattern.every((digit, variable) => (
+        digit === 2 || digit === ((minterm >> (nVars - variable - 1)) & 1)
+      ));
+      if (matches) coverage |= 1 << minterm;
+    }
+    cubes.push({ coverage, literals });
+  }
+  return cubes;
+}
+
+function bruteForceMinimum(cells, nVars, cubes, form) {
+  // At most 16 cells here, so ordinary integer masks suffice. Enumerate every
+  // reachable union of valid cubes, keeping the cheapest cost of that union.
+  // Every transition adds a required cell, so numeric subset order is a valid
+  // DP order. This searches all covers, including those using nonprime cubes.
+  assert.ok(nVars <= 4);
+  const target = form === 'SOP' ? 1 : 0;
+  let required = 0;
+  let forbidden = 0;
+  for (let minterm = 0; minterm < cells.length; minterm += 1) {
+    if (cells[minterm] === target) required |= 1 << minterm;
+    if (cells[minterm] === 1 - target) forbidden |= 1 << minterm;
+  }
+  if (required === 0) return { terms: 0, literals: 0 };
+  const validCubes = cubes.filter(cube => (cube.coverage & forbidden) === 0)
+    .map(cube => ({ coverage: cube.coverage & required, literals: cube.literals }))
+    .filter(cube => cube.coverage !== 0);
+  const terms = new Uint8Array(1 << cells.length).fill(255);
+  const literals = new Uint8Array(1 << cells.length).fill(255);
+  terms[0] = 0;
+  literals[0] = 0;
+  for (let covered = 0; covered <= required; covered += 1) {
+    if (terms[covered] === 255) continue;
+    for (const cube of validCubes) {
+      const union = covered | cube.coverage;
+      if (union === covered) continue;
+      const nextTerms = terms[covered] + 1;
+      const nextLiterals = literals[covered] + cube.literals;
+      if (nextTerms < terms[union] || (nextTerms === terms[union] && nextLiterals < literals[union])) {
+        terms[union] = nextTerms;
+        literals[union] = nextLiterals;
+      }
+    }
+  }
+  return { terms: terms[required], literals: literals[required] };
+}
+
+function checkAgainstOracle(cells, nVars, cubes) {
+  for (const form of ['SOP', 'POS']) {
+    try {
+      const expected = bruteForceMinimum(cells, nVars, cubes, form);
+      const result = solve(cells, nVars, { form });
+      assert.equal(result.termCount, expected.terms);
+      assert.equal(result.literalCount, expected.literals);
+      assertValidSolution(cells, nVars, result);
+    } catch (error) {
+      error.message = `${nVars}-variable ${form}, cells=${JSON.stringify(cells)}: ${error.message}`;
+      throw error;
+    }
+  }
+}
+
 test('Gray order has the conventional headers', () => {
   assert.deepEqual(grayCode(0), [0]);
   assert.deepEqual(grayCode(1), [0, 1]);
@@ -380,4 +458,141 @@ test('explanation data identifies fixed literals and dashed variables', () => {
   assert.deepEqual(JSON.parse(JSON.stringify(result)), result);
   result.groups[0].explanation.dropped[0].values.push(2);
   assert.deepEqual(solve(cells, 4).groups[0].explanation.dropped[0].values, [0, 1]);
+});
+
+for (const nVars of [2, 3]) {
+  test(`every ${nVars}-variable assignment of 0/1/X has the true minimum SOP and POS`, () => {
+    const cellCount = 2 ** nVars;
+    const cubes = enumerateOracleCubes(nVars);
+    let checked = 0;
+    for (let assignment = 0; assignment < 3 ** cellCount; assignment += 1) {
+      let digits = assignment;
+      const cells = [];
+      for (let minterm = 0; minterm < cellCount; minterm += 1) {
+        cells.push([0, 1, 'X'][digits % 3]);
+        digits = Math.floor(digits / 3);
+      }
+      checkAgainstOracle(cells, nVars, cubes);
+      checked += 1;
+    }
+    assert.equal(checked, nVars === 2 ? 81 : 6561);
+  });
+}
+
+test('known four- through six-variable functions have their expected covers', () => {
+  const cases = [
+    [4, "B'D' + BD", 2, 4],
+    [4, "A'B + AC'", 2, 4],
+    [5, "B'D' + BD", 2, 4], // Both groups cross the A layers.
+    [5, "A'B + AC'", 2, 4],
+    [5, "A'B'C'D'E' + ABCDE", 2, 10],
+    [6, "A'B + AB'", 2, 4], // The two diagonally opposite AB layers.
+    [6, "CD' + EF", 2, 4], // Each group spans every AB layer.
+    [6, "A'B + AC' + DE'F", 3, 7],
+    [6, "A'B'C'D'E'F' + ABCDEF", 2, 12],
+  ];
+  for (const [nVars, expression, terms, literals] of cases) {
+    const cells = Array.from({ length: 2 ** nVars }, (_, m) => evaluateExpression(expression, 'SOP', m, nVars));
+    const result = solve(cells, nVars);
+    assert.equal(result.termCount, terms, expression);
+    assert.equal(result.literalCount, literals, expression);
+    assertValidSolution(cells, nVars, result);
+    assertValidSolution(cells, nVars, solve(cells, nVars, { form: 'POS' }));
+    // Complementing the function gives the dual POS cover with identical cost.
+    const complement = cells.map(value => 1 - value);
+    const pos = solve(complement, nVars, { form: 'POS' });
+    assert.equal(pos.termCount, terms, expression);
+    assert.equal(pos.literalCount, literals, expression);
+    assertValidSolution(complement, nVars, pos);
+  }
+});
+
+test('five- and six-variable X groups cross layers and preserve high minterms', () => {
+  for (const [nVars, ones, dontCares, expression] of [
+    [5, [0, 1, 4, 5, 16, 17, 20, 21], [2, 3, 6, 7, 18, 19, 22, 23], "B'"],
+    [6, [3, 11, 35, 43], [1, 9, 33, 41], "B'D'F"],
+  ]) {
+    const cells = makeCells(nVars, ones, dontCares);
+    const result = solve(cells, nVars);
+    assert.equal(result.expression, expression);
+    assert.equal(result.termCount, 1);
+    assert.deepEqual(result.groups[0].minterms, [...ones, ...dontCares].sort((a, b) => a - b));
+    assertValidSolution(cells, nVars, result);
+    const complement = cells.map(value => value === 'X' ? 'X' : 1 - value);
+    const pos = solve(complement, nVars, { form: 'POS' });
+    assert.equal(pos.termCount, 1);
+    assert.equal(pos.literalCount, result.literalCount);
+    assertValidSolution(complement, nVars, pos);
+  }
+});
+
+test('parity requires singleton covers through all 64 minterm positions', () => {
+  for (const nVars of [4, 5, 6]) {
+    const cells = Array.from({ length: 2 ** nVars }, (_, m) => (
+      [...m.toString(2)].filter(bit => bit === '1').length % 2
+    ));
+    for (const form of ['SOP', 'POS']) {
+      const result = solve(cells, nVars, { form });
+      assert.equal(result.termCount, 2 ** (nVars - 1));
+      assert.equal(result.literalCount, nVars * 2 ** (nVars - 1));
+      assert.ok(result.groups.every(group => group.minterms.length === 1));
+      assertValidSolution(cells, nVars, result);
+    }
+  }
+});
+
+test('a dense six-variable chart without essentials has an exact six-term cover', () => {
+  // All except 000000 and 111111. Each one-hot input needs a different term,
+  // and avoiding both forbidden corners needs at least two literals per term.
+  // A directed cycle of six terms Ai Ai+1' meets both bounds: 6 terms, 12 literals.
+  const cells = Array(64).fill(1);
+  cells[0] = 0;
+  cells[63] = 0;
+  const primes = findPrimeImplicants(cells, 6);
+  assert.equal(primes.length, 30);
+  assert.ok(cells.every((value, m) => value === 0 || primes.filter(prime => prime.minterms.includes(m)).length > 1));
+  const result = solve(cells, 6);
+  assert.equal(result.termCount, 6);
+  assert.equal(result.literalCount, 12);
+  assertValidSolution(cells, 6, result);
+});
+
+test('exact search improves a greedy five-term cover to four terms', () => {
+  // No essentials and no X cells. Taking the largest available groups in
+  // prime order yields five terms; the exact covering step must improve it.
+  const cells = [1, 1, 1, 1, 0, 1, 0, 1, 1, 0, 1, 1, 1, 1, 0, 1];
+  const primes = findPrimeImplicants(cells, 4);
+  assert.ok(cells.every((value, m) => value === 0 || primes.filter(prime => prime.minterms.includes(m)).length > 1));
+  const result = solve(cells, 4);
+  assert.equal(result.termCount, 4);
+  assert.equal(result.literalCount, 9);
+  checkAgainstOracle(cells, 4, enumerateOracleCubes(4));
+});
+
+function seededRandom(seed) {
+  let state = seed;
+  return () => {
+    state = (Math.imul(state, 1664525) + 1013904223) >>> 0;
+    return state / 2 ** 32;
+  };
+}
+
+test('seeded four-variable charts also match the independent cover oracle', () => {
+  const random = seededRandom(20261113);
+  const cubes = enumerateOracleCubes(4);
+  for (let trial = 0; trial < 64; trial += 1) {
+    const cells = Array.from({ length: 16 }, () => [0, 1, 'X'][Math.floor(random() * 3)]);
+    checkAgainstOracle(cells, 4, cubes);
+  }
+});
+
+test('seeded six-variable charts preserve validity in both forms', () => {
+  const random = seededRandom(8675309);
+  for (let trial = 0; trial < 64; trial += 1) {
+    const density = 0.25 + random() * 0.65;
+    const cells = Array.from({ length: 64 }, () => random() < density ? 1 : (random() < 0.2 ? 'X' : 0));
+    for (const form of ['SOP', 'POS']) {
+      assertValidSolution(cells, 6, solve(cells, 6, { form }));
+    }
+  }
 });
