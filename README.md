@@ -1,7 +1,7 @@
 # Implicant
 
-Interactive Karnaugh map solver. A simple, touch-friendly portfolio piece with a live GitHub Pages demo (coming soon).
+A touch-friendly Karnaugh map solver, starting with a playable four-variable demo.
 
-This repository is just getting started. See [docs/SPEC.md](docs/SPEC.md) for the full design.
+Live demo: [danielmellen-university.github.io/Implicant](https://danielmellen-university.github.io/Implicant/)
 
-License: MIT.
+See [docs/SPEC.md](docs/SPEC.md) for the milestone plan. License: MIT.
