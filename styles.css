@@ -38,7 +38,7 @@ button {
   cursor: pointer;
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
-  transition: background-color var(--motion), border-color var(--motion), color var(--motion);
+  transition: background-color var(--motion), border-color var(--motion), color var(--motion), opacity var(--motion);
 }
 @media (hover: hover) {
   button:hover { background-color: var(--control); border-color: #605a50; }
@@ -226,6 +226,7 @@ h2 { font-size: 17px; font-weight: 650; letter-spacing: -.02em; }
   font: 500 clamp(15px, calc(var(--cell) * .36), 27px)/1 var(--mono);
 }
 .cell[data-grouped] { color: var(--text); }
+.kmap[data-group-selected] .cell:not([data-highlighted], :focus-visible) { opacity: .55; }
 @media (hover: hover) {
   .cell:hover, .truth-value:hover {
     border-color: color-mix(in srgb, var(--value-border), var(--text) 25%);

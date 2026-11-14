@@ -9,6 +9,7 @@ let paintingPointer = null;
 let pendingActivation = null;
 let form = 'SOP';
 let groupColors = new Map();
+let solutionGroups = [];
 let activeView = 'groups';
 let mapCells = [];
 
@@ -190,7 +191,6 @@ function updateMap(groups, animate) {
   for (const group of groups) {
     for (const minterm of group.minterms) memberships[minterm].push(groupColors.get(group.term));
   }
-  const highlightedGroup = groups[selectedGroup];
   mapCells.forEach((state, minterm) => {
     const { cell, fill, fade, value, dots } = state;
     const output = values[minterm];
@@ -206,9 +206,6 @@ function updateMap(groups, animate) {
     cell.dataset.value = String(output);
     value.textContent = output === 2 ? 'X' : String(output);
     cell.setAttribute('aria-label', `Minterm ${minterm}: ${output === 2 ? 'don’t care' : output}`);
-    cell.style.setProperty('--highlight', highlightedGroup?.minterms.includes(minterm)
-      ? groupColors.get(highlightedGroup.term) : 'transparent');
-
     if (state.colors === key) return;
     cell.toggleAttribute('data-grouped', colors.length > 0);
     fill.style.background = groupFill(colors);
@@ -218,6 +215,18 @@ function updateMap(groups, animate) {
       return dot;
     }));
     state.colors = key;
+  });
+}
+
+function updateMapHighlight() {
+  const group = solutionGroups[selectedGroup];
+  const minterms = new Set(group?.minterms);
+  const color = group ? groupColors.get(group.term) : 'transparent';
+  map.toggleAttribute('data-group-selected', Boolean(group));
+  mapCells.forEach(({ cell }, minterm) => {
+    const highlighted = minterms.has(minterm);
+    cell.toggleAttribute('data-highlighted', highlighted);
+    cell.style.setProperty('--highlight', highlighted ? color : 'transparent');
   });
 }
 
@@ -296,13 +305,15 @@ function buildExplanation(groups) {
 
 function render() {
   const result = solve(cellsForSolver(), nVars, { form });
-  groupColors = colorsForGroups(result.groups, stageColor, groupColors);
+  solutionGroups = result.groups;
+  groupColors = colorsForGroups(solutionGroups, stageColor, groupColors);
   const focused = document.activeElement;
   const focusedGroup = focused?.dataset.group;
   const focusedTruth = focused?.dataset.truthMinterm;
   const layoutChanged = map.dataset.vars !== String(nVars);
   if (layoutChanged) buildMap(getLayout(nVars));
   updateMap(result.groups, !layoutChanged && !mapPanel.hidden && !reducedMotion.matches);
+  updateMapHighlight();
   if (layoutChanged && !mapPanel.hidden && !reducedMotion.matches) {
     map.animate([{ opacity: .65 }, { opacity: 1 }], { duration: 160, easing: 'ease-out' });
   }
@@ -456,11 +467,16 @@ legend.addEventListener('click', (event) => {
   if (!row) return;
   const group = Number(row.dataset.group);
   selectedGroup = selectedGroup === group ? -1 : group;
-  render();
+  legend.querySelector('[aria-pressed="true"]')?.setAttribute('aria-pressed', 'false');
+  row.setAttribute('aria-pressed', String(selectedGroup === group));
   if (narrowLayout.matches && selectedGroup !== -1) {
     showView('map', true);
+    // Resolve the newly visible map's styles before changing the highlight.
+    if (!reducedMotion.matches) map.getBoundingClientRect();
     document.querySelector('[data-view="map"]').focus({ preventScroll: true });
   }
+  updateMapHighlight();
+  buildExplanation(solutionGroups);
 });
 
 document.querySelector('#randomize').addEventListener('click', () => {
