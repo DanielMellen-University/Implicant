@@ -23,6 +23,23 @@ function element(tag, className, text) {
   return node;
 }
 
+
+function groupTint(color) {
+  return `color-mix(in srgb, ${color} 32%, var(--bg))`;
+}
+
+function cellBackground(memberships) {
+  const colors = memberships.map((index) => groupTint(GROUP_COLORS[index % GROUP_COLORS.length]));
+  if (colors.length === 1) return colors[0];
+  const stops = colors.map((color, index) => {
+    const start = (index / colors.length) * 100;
+    const end = ((index + 1) / colors.length) * 100;
+    return `${color} ${start}% ${end}%`;
+  });
+  // Hard stops, not a soft blend, so each group gets an equal flat slice.
+  return `linear-gradient(to right, ${stops.join(', ')})`;
+}
+
 function cellsForSolver() {
   return values.map((value) => (value === 2 ? 'X' : value));
 }
@@ -90,7 +107,7 @@ function buildLayer(layout, layerIndex, groups) {
       cell.setAttribute('aria-label', `Minterm ${minterm}: ${values[minterm] === 2 ? 'don’t care' : values[minterm]}`);
       cell.setAttribute('aria-pressed', String(values[minterm] !== 0));
       if (memberships.length) {
-        cell.style.backgroundColor = `color-mix(in srgb, ${GROUP_COLORS[memberships[0] % GROUP_COLORS.length]} 18%, var(--bg))`;
+        cell.style.background = cellBackground(memberships);
       }
       if (selectedGroup >= 0 && memberships.includes(selectedGroup)) {
         cell.style.outline = `2px solid ${GROUP_COLORS[selectedGroup % GROUP_COLORS.length]}`;
