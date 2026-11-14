@@ -2,11 +2,19 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   adjacentMinterms,
+  findPrimeImplicants,
   getLayout,
   grayCode,
   mintermToPosition,
   positionToMinterm,
 } from '../solver.js';
+
+function makeCells(nVars, ones, dontCares = []) {
+  const cells = Array(2 ** nVars).fill(0);
+  for (const minterm of ones) cells[minterm] = 1;
+  for (const minterm of dontCares) cells[minterm] = 'X';
+  return cells;
+}
 
 test('Gray order has the conventional headers', () => {
   assert.deepEqual(grayCode(0), [0]);
@@ -120,4 +128,67 @@ test('all adjacency lists are unique, symmetric, and differ by one variable', ()
       }
     }
   }
+});
+
+test('Quine–McCluskey merges through multiple stages and removes duplicates', () => {
+  assert.deepEqual(findPrimeImplicants(makeCells(4, [0, 1, 4, 5]), 4), [{
+    bits: 0,
+    mask: 5,
+    pattern: '0-0-',
+    minterms: [0, 1, 4, 5],
+    literalCount: 2,
+  }]);
+  const primes = findPrimeImplicants(Array(64).fill(1), 6);
+  assert.equal(primes.length, 1);
+  assert.equal(primes[0].pattern, '------');
+  assert.equal(primes[0].literalCount, 0);
+  assert.equal(primes[0].minterms.length, 64);
+});
+
+test('unmergeable singletons remain primes', () => {
+  const primes = findPrimeImplicants(makeCells(3, [0, 3, 5, 6]), 3);
+  assert.deepEqual(primes.map(prime => prime.pattern), ['000', '011', '101', '110']);
+  assert.ok(primes.every(prime => prime.literalCount === 3 && prime.minterms.length === 1));
+});
+
+test('prime generation uses X cells but discards X-only primes', () => {
+  const cells = makeCells(3, [0], [1, 7]);
+  assert.deepEqual(findPrimeImplicants(cells, 3).map(prime => prime.pattern), ['00-']);
+  assert.deepEqual(findPrimeImplicants(Array(8).fill('X'), 3), []);
+  assert.deepEqual(findPrimeImplicants(Array(8).fill(0), 3), []);
+  assert.deepEqual(findPrimeImplicants(makeCells(2, [], [1, 2]), 2), []);
+});
+
+test('the concept example has all four primes, including an unneeded prime', () => {
+  const cells = makeCells(4, [0, 1, 4, 5, 6, 8, 9, 10, 11]);
+  const primes = findPrimeImplicants(cells, 4);
+  assert.deepEqual(new Set(primes.map(prime => prime.pattern)), new Set([
+    '-00-', '0-0-', '01-0', '10--',
+  ]));
+  for (const prime of primes) {
+    assert.ok(prime.minterms.every(minterm => cells[minterm] === 1));
+    assert.equal(prime.minterms.length, 2 ** (4 - prime.literalCount));
+  }
+});
+
+test('POS primes group zeros and optional X cells, never ones', () => {
+  const cells = [0, 'X', 1, 1];
+  const primes = findPrimeImplicants(cells, 2, { form: 'POS' });
+  assert.deepEqual(primes.map(prime => prime.pattern), ['0-']);
+  assert.deepEqual(primes[0].minterms, [0, 1]);
+});
+
+test('prime generation validates the cell representation and form', () => {
+  for (const cells of [[], Array(3).fill(0), '0000', [0, 1, 'x', 0], [0, 1, true, 0], Array(4)]) {
+    assert.throws(() => findPrimeImplicants(cells, 2), TypeError);
+  }
+  assert.throws(() => findPrimeImplicants(Array(4).fill(0), 2, { form: 'sop' }), RangeError);
+  assert.throws(() => findPrimeImplicants(Array(2).fill(0), 1), RangeError);
+});
+
+test('prime generation accepts frozen input and returns independent data', () => {
+  const cells = Object.freeze(makeCells(4, [0, 1, 4, 5]));
+  const first = findPrimeImplicants(cells, 4);
+  first[0].minterms.push(15);
+  assert.deepEqual(findPrimeImplicants(cells, 4)[0].minterms, [0, 1, 4, 5]);
 });
