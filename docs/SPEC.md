@@ -58,7 +58,7 @@ The sum is `F = A′C′ + AB′`. For the same inputs, grouping the zeros gives
 
 The view retains a surviving term's color while you edit. New groups use palette order unless they overlap a colored group. In that case, the view chooses the unused tint with the greatest OKLab distance from its closest overlapping neighbor. A cell covered by multiple terms divides its fill into one equal segment per group.
 
-A URL such as `?v=4&cells=1100110011110000&form=SOP` stores the variable count, outputs in minterm order, and expression form. In the URL, `2` encodes a don't-care. Invalid state falls back to the default example. The app replaces the current history entry as you edit so a drag does not create a series of Back entries.
+A URL such as `?v=4&cells=1100110011110000&form=SOP` stores the variable count, outputs in minterm order, and expression form. In the URL, `2` encodes a don't-care. A fresh visit or invalid state opens a cleared four-variable map. The app replaces the current history entry as you edit so a drag does not create a series of Back entries.
 
 ## Verification
 

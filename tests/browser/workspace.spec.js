@@ -36,6 +36,8 @@ test('map and truth table edit the same output and restore it from the URL', asy
 test('Cycle is the default and advances once per activation', async ({ page, isMobile }) => {
   await page.goto('/');
   const cycle = page.getByRole('button', { name: 'Cycle', exact: true });
+  await expect(page.locator(".cell[data-value='0']")).toHaveCount(16);
+  await expect(page.locator("#expression")).toHaveText("F = 0");
   await expect(cycle).toHaveAttribute('aria-pressed', 'true');
   await expect(page.locator('.paint-control button[aria-pressed="true"]')).toHaveCount(1);
 

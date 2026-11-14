@@ -1,8 +1,7 @@
 import { getLayout, positionToMinterm, solve } from './solver.js';
 import { colorsForGroups, groupTint, randomizeValues } from './helpers.js?v=5';
-const initialValues = [1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0];
 let nVars = 4;
-let values = [...initialValues];
+let values = Array(2 ** nVars).fill(0);
 let selectedGroup = -1;
 let selectedPaint = 0;
 let cycleMode = true;
