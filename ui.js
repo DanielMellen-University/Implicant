@@ -6,8 +6,7 @@ let values = [...initialValues];
 let selectedGroup = -1;
 let selectedPaint = 0;
 let paintingPointer = null;
-let pendingTouch = null;
-let cycleTaps = true;
+let pendingActivation = null;
 let form = 'SOP';
 let groupColors = new Map();
 let activeView = 'groups';
@@ -15,7 +14,7 @@ let mapCells = [];
 
 const narrowLayout = window.matchMedia('(max-width: 879px)');
 const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
-const touchLayout = window.matchMedia('(any-pointer: coarse)');
+let cycleMode = window.matchMedia('(any-pointer: coarse)').matches;
 const tintAnimations = new WeakMap();
 const viewButtons = document.querySelectorAll('[data-view]');
 const viewBar = document.querySelector('.views');
@@ -103,14 +102,13 @@ function showView(view, animate = false) {
 }
 
 function updatePaintControls() {
-  const cycling = touchLayout.matches && cycleTaps;
   paintButtons.forEach((button) => {
     const selected = Number(button.dataset.paint) === selectedPaint;
-    button.setAttribute('aria-pressed', String(selected && !(cycling && mapPanel.contains(button))));
+    button.setAttribute('aria-pressed', String(selected && !(cycleMode && mapPanel.contains(button))));
   });
-  cycleButton.setAttribute('aria-pressed', String(cycling));
-  mapHint.textContent = cycling
-    ? 'Tap a cell to cycle through 0, 1, and X. X means don’t care.'
+  cycleButton.setAttribute('aria-pressed', String(cycleMode));
+  mapHint.textContent = cycleMode
+    ? 'Click or tap a cell to cycle through 0, 1, and X. X means don’t care.'
     : 'Choose 0, 1, or X to paint. X means don’t care.';
   truthHint.textContent = `Select an output to paint it ${selectedPaint === 2 ? 'X' : selectedPaint}.`;
 }
@@ -339,10 +337,9 @@ function setCell(minterm, value) {
   render();
 }
 
-function paintCell(cell, pointerType) {
+function editMapCell(cell) {
   const minterm = Number(cell.dataset.minterm);
-  if (pointerType === 'touch' && cycleTaps) setCell(minterm, (values[minterm] + 1) % 3);
-  else setCell(minterm, selectedPaint);
+  setCell(minterm, cycleMode ? (values[minterm] + 1) % 3 : selectedPaint);
 }
 
 showView(narrowLayout.matches ? 'map' : 'groups');
@@ -353,7 +350,6 @@ render();
 narrowLayout.addEventListener('change', () => {
   showView(narrowLayout.matches ? 'map' : activeView === 'map' ? 'groups' : activeView);
 });
-touchLayout.addEventListener('change', updatePaintControls);
 viewButtons.forEach(button => button.addEventListener('click', () => {
   if (activeView === button.dataset.view) return;
   showView(button.dataset.view, true);
@@ -389,23 +385,22 @@ variableControl.addEventListener('click', (event) => {
 
 paintButtons.forEach(button => button.addEventListener('click', () => {
   selectedPaint = Number(button.dataset.paint);
-  cycleTaps = false;
+  cycleMode = false;
   updatePaintControls();
 }));
 
 cycleButton.addEventListener('click', () => {
-  cycleTaps = !cycleTaps;
+  cycleMode = !cycleMode;
   updatePaintControls();
 });
 
 map.addEventListener('pointerdown', (event) => {
   const cell = event.target.closest('[data-minterm]');
   if (!cell || event.button !== 0 || !event.isPrimary) return;
-  // Touch: wait for a confirmed tap so a scroll starting on a cell
-  // does not change the map. Mouse and pen still paint immediately
-  // and can drag across cells.
-  if (event.pointerType === 'touch') {
-    pendingTouch = {
+  // Confirm a tap or click before cycling or applying paint on touch.
+  // Mouse and pen can still drag-paint a fixed value.
+  if (cycleMode || event.pointerType === 'touch') {
+    pendingActivation = {
       pointerId: event.pointerId,
       minterm: Number(cell.dataset.minterm),
       startX: event.clientX,
@@ -414,33 +409,33 @@ map.addEventListener('pointerdown', (event) => {
     return;
   }
   paintingPointer = event.pointerId;
-  paintCell(cell, event.pointerType);
+  editMapCell(cell);
   event.preventDefault();
 });
 
 map.addEventListener('pointermove', (event) => {
-  if (!pendingTouch || event.pointerId !== pendingTouch.pointerId) return;
-  const distance = Math.hypot(event.clientX - pendingTouch.startX, event.clientY - pendingTouch.startY);
-  if (distance > 10) pendingTouch = null;
+  if (!pendingActivation || event.pointerId !== pendingActivation.pointerId) return;
+  const distance = Math.hypot(event.clientX - pendingActivation.startX, event.clientY - pendingActivation.startY);
+  if (distance > 10) pendingActivation = null;
 });
 
 map.addEventListener('pointerover', (event) => {
-  if (paintingPointer === null || event.pointerId !== paintingPointer || !event.buttons) return;
+  if (cycleMode || paintingPointer === null || event.pointerId !== paintingPointer || !event.buttons) return;
   const cell = event.target.closest('[data-minterm]');
-  if (cell) paintCell(cell, event.pointerType);
+  if (cell) editMapCell(cell);
 });
 
 function endPointer(event) {
-  if (pendingTouch && event.pointerId === pendingTouch.pointerId) {
+  if (pendingActivation && event.pointerId === pendingActivation.pointerId) {
+    const { minterm, startX, startY } = pendingActivation;
+    pendingActivation = null;
     if (event.type === 'pointerup') {
-      const target = document.elementFromPoint(event.clientX, event.clientY);
-      const cell = target && target.closest ? target.closest('[data-minterm]') : null;
-      const distance = Math.hypot(event.clientX - pendingTouch.startX, event.clientY - pendingTouch.startY);
-      if (cell && Number(cell.dataset.minterm) === pendingTouch.minterm && distance <= 10) {
-        paintCell(cell, 'touch');
+      const cell = document.elementFromPoint(event.clientX, event.clientY)?.closest('[data-minterm]');
+      const distance = Math.hypot(event.clientX - startX, event.clientY - startY);
+      if (cell && Number(cell.dataset.minterm) === minterm && distance <= 10) {
+        editMapCell(cell);
       }
     }
-    pendingTouch = null;
   }
   if (event.pointerId === paintingPointer) paintingPointer = null;
 }
@@ -452,7 +447,7 @@ map.addEventListener('click', (event) => {
   // Keep keyboard activation available; pointer input is handled above.
   if (event.detail !== 0) return;
   const cell = event.target.closest('[data-minterm]');
-  if (cell) setCell(Number(cell.dataset.minterm), selectedPaint);
+  if (cell) editMapCell(cell);
 });
 
 legend.addEventListener('click', (event) => {

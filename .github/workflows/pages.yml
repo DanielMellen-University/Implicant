@@ -27,7 +27,7 @@ jobs:
       - name: Prepare app files
         run: |
           mkdir _site
-          cp index.html styles.css ui.js solver.js helpers.js _site/
+          cp index.html styles.css ui.js solver.js helpers.js favicon.svg _site/
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v5
         with:

@@ -26,7 +26,7 @@ Every axis uses Gray-code headers. Map cells use `positionToMinterm` and `minter
 
 ## Cells and interaction
 
-- The 0 / 1 / X selector chooses a paint value. Mouse clicks and click-drag paint cells with that value. Touch devices can toggle Cycle taps or choose a paint value to paint; the paint selector stays available.
+- The 0 / 1 / X / Cycle selector controls map editing. Mouse clicks and click-drag paint the chosen fixed value. Cycle advances a cell through 0, 1, and X with each click, tap, or keyboard activation.
 - Changing the variable count creates a cleared map. The initial four-variable map starts with an interesting example.
 - Each cell shows its minterm number, small, at the top-left.
 - The live minimal expression defaults to SOP and uses prime marks for complements, as in `F = B′D′ + BD`. A visible SOP / POS switch changes the minimized form; POS minimizes zero groups and labels the result `Minimal POS`.
@@ -51,7 +51,7 @@ Every axis uses Gray-code headers. Map cells use `positionToMinterm` and `minter
 - Flat and minimal: 0.5px borders, 8px radius, generous spacing, no gradients or shadows.
 - Touch targets are at least 44px. Controls have instant active feedback and do not rely on hover.
 - The map and live answer are visible on load with the four-variable example. Extras are in clearly labeled collapsible panels so the demo remains immediately playable.
-- The current controls are the 2–6 variable selector, 0 / 1 / X paint selector, touch Cycle taps control, Randomize, and Clear.
+- The current controls are the 2–6 variable selector, 0 / 1 / X / Cycle paint selector, Randomize, and Clear.
 - The legend outlines the selected group across layers.
 - The 6-variable truth table is contained in a scrollable region. Layouts fit narrow phones without reducing map cells below 44px or introducing horizontal page overflow.
 

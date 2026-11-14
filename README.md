@@ -14,7 +14,7 @@ Live demo: [danielmellen-university.github.io/Implicant](https://danielmellen-un
 ## Features
 
 - Maps for 2 through 6 variables, including two-layer 5-variable maps and four-layer 6-variable maps
-- A 0 / 1 / X paint selector, with tap-to-cycle on touch screens
+- A 0 / 1 / X / Cycle selector for fixed painting or cycling on click and tap
 - Live minimal SOP or POS, with a unique color for every group
 - Muted group fills with full-cell splits and colored dots for overlapping groups
 - A legend that outlines a group's cells, a minterm list, a truth table synced both ways with the map, and per-group explanations

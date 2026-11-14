@@ -97,7 +97,7 @@ h1 { font-size: clamp(23px, 2.25vw, 30px); font-weight: 650; letter-spacing: -.0
   background: var(--stage);
 }
 .segment-row button { min-width: 44px; padding: 0 8px; border-color: transparent; }
-.segment-row button[aria-pressed="true"], .cycle-mode[aria-pressed="true"] {
+.segment-row button[aria-pressed="true"] {
   border-color: #615236;
   background: var(--accent-bg);
   color: var(--accent);
@@ -125,9 +125,7 @@ h1 { font-size: clamp(23px, 2.25vw, 30px); font-weight: 650; letter-spacing: -.0
 .map-header, .answer-heading { justify-content: space-between; gap: 10px; }
 h2 { font-size: 17px; font-weight: 650; letter-spacing: -.02em; }
 .map-actions { gap: 6px; }
-.map-actions button, .cycle-mode { background: var(--control); }
-.map-tools { flex-wrap: wrap; gap: 8px 10px; }
-.cycle-mode { display: none; }
+.map-actions button { background: var(--control); }
 .map-stage {
   display: grid;
   place-items: center;
@@ -220,6 +218,11 @@ h2 { font-size: 17px; font-weight: 650; letter-spacing: -.02em; }
   font: 500 clamp(15px, calc(var(--cell) * .36), 27px)/1 var(--mono);
 }
 .cell[data-grouped] { color: var(--text); }
+.cell[data-value="2"]:not([data-grouped]) {
+  --value-bg: #2a2a29;
+  --value-border: #50504e;
+  --value-ink: #d2cfc8;
+}
 @media (hover: hover) {
   .cell:hover, .truth-value:hover {
     border-color: var(--value-ink);
@@ -434,10 +437,6 @@ h2 { font-size: 17px; font-weight: 650; letter-spacing: -.02em; }
   .variable-control .segment-row button { flex: 1; min-width: 0; }
   .map-actions button { padding-inline: 8px; font-size: 12px; }
   .kmap { --axis: 30px; --gap: 4px; }
-}
-
-@media (any-pointer: coarse) {
-  .cycle-mode { display: inline-block; }
 }
 
 @media (prefers-reduced-motion: reduce) {
