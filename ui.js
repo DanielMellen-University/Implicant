@@ -5,6 +5,7 @@ let nVars = 4;
 let values = [...initialValues];
 let selectedGroup = -1;
 let selectedPaint = 0;
+let cycleMode = true;
 let paintingPointer = null;
 let pendingActivation = null;
 let form = 'SOP';
@@ -15,7 +16,6 @@ let mapCells = [];
 
 const narrowLayout = window.matchMedia('(max-width: 879px)');
 const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
-let cycleMode = window.matchMedia('(any-pointer: coarse)').matches;
 const tintAnimations = new WeakMap();
 const stageColor = getComputedStyle(document.documentElement).getPropertyValue('--stage').trim();
 const viewButtons = document.querySelectorAll('[data-view]');

@@ -1,6 +1,4 @@
-<h1 align="center"><img src="favicon.svg" alt="Implicant" width="96" height="96"></h1>
-
-<p align="center"><strong>Interactive Karnaugh Map Solver</strong></p>
+<h1 align="center"><img src="docs/implicant-logo.svg" alt="Implicant | Interactive Karnaugh Map Solver" width="510"></h1>
 
 <p align="center">
   <a href="https://github.com/DanielMellen-University/Implicant/actions/workflows/ci.yml"><img alt="Tests" src="https://github.com/DanielMellen-University/Implicant/actions/workflows/ci.yml/badge.svg?branch=main"></a>

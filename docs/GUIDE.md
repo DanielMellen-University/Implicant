@@ -14,7 +14,7 @@ Five variables add two layers. Six variables add four. Two cells in neighboring 
 | --- | --- |
 | **Variables** | Choose two through six variables. Changing the count starts a cleared map. |
 | **0**, **1**, **X** | Set the output to a fixed value. Click or tap a cell. With a mouse, drag to paint multiple cells. |
-| **Cycle** | Step through `0 → 1 → X → 0` with each click, tap, or keyboard activation. |
+| **Cycle** | The default editing mode. Step through `0 → 1 → X → 0` with each click, tap, or keyboard activation. |
 | **Randomize** / **Clear** | Fill each cell independently with an equally likely value, or set every cell to `0`. |
 | **Truth Table** | Select a value and click or tap an output in the `F out` column. The matching map cell updates. |
 

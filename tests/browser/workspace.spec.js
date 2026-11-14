@@ -33,11 +33,11 @@ test('map and truth table edit the same output and restore it from the URL', asy
   await expect(page.getByRole('button', { name: 'POS', exact: true })).toHaveAttribute('aria-pressed', 'true');
 });
 
-test('Cycle advances once per activation and selecting a value exits Cycle', async ({ page, isMobile }) => {
+test('Cycle is the default and advances once per activation', async ({ page, isMobile }) => {
   await page.goto('/');
   const cycle = page.getByRole('button', { name: 'Cycle', exact: true });
-  if (!isMobile) await cycle.click();
   await expect(cycle).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('.paint-control button[aria-pressed="true"]')).toHaveCount(1);
 
   const cell = mapCell(page, 2);
   for (const value of ['1', '2', '0']) {

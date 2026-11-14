@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 510 120" role="img" aria-labelledby="title">
+  <title id="title">Implicant | Interactive Karnaugh Map Solver</title>
+  <rect x="0.5" y="0.5" width="509" height="119" rx="16" fill="#1f1e1d" stroke="#3d3b37"/>
+  <svg x="27" y="28" width="64" height="64" viewBox="0 0 32 32">
+    <rect x="1" y="1" width="30" height="30" rx="7" fill="#3a3222" stroke="#5b5037" stroke-width="2"/>
+    <g fill="#dfc88e">
+      <rect x="7" y="7" width="8" height="8" rx="2"/>
+      <rect x="17" y="7" width="8" height="8" rx="2"/>
+    </g>
+    <g fill="none" stroke="#9d8754" stroke-width="1.5">
+      <rect x="7.75" y="17.75" width="6.5" height="6.5" rx="1.25"/>
+      <rect x="17.75" y="17.75" width="6.5" height="6.5" rx="1.25"/>
+    </g>
+  </svg>
+  <g font-family="system-ui, -apple-system, sans-serif">
+    <text x="111" y="61" fill="#f1efe8" font-size="42" font-weight="650" letter-spacing="-1.9">Implicant</text>
+    <text x="113" y="88" fill="#a39e94" font-size="19">Interactive Karnaugh Map Solver</text>
+  </g>
+</svg>
