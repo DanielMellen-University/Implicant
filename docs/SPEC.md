@@ -1,20 +1,20 @@
 # Implicant specification
 
-Interactive Karnaugh map solver. A genuinely nice, simple, touch-friendly portfolio piece with a live GitHub Pages demo.
+Interactive Karnaugh map solver: a simple, touch-friendly portfolio piece with a live GitHub Pages demo.
 
-Visual direction (from the approved concept): dark theme, minterm numbers in the top-left of each cell, tinted group cells with colored dots, live output like `F = A'C' + AB' + A'BD'`, and a group legend with a swatch, term, and cell count.
+Visual direction: warm paper light theme and warm charcoal dark theme; minterm numbers in the top-left of each cell; tinted group cells with colored dots; live output like `F = A′C′ + AB′ + A′BD′`; and a group legend with a swatch, term, and cell count.
 
 ## Stack
 
 - HTML, CSS, and vanilla JavaScript. No framework and no build step.
 - `index.html` is the app shell.
-- `solver.js` is pure logic with no DOM. It is an ES module usable from both the browser and Node.
+- The solver module is pure logic with no DOM. It is an ES module usable from both the browser and Node.
 - Render / UI JavaScript is kept in a separate file from the solver.
 - Tests use `node --test` with no dependencies.
 
 ## Variables and layouts
 
-Support 2, 3, 4, 5, and 6 variables.
+Later milestones support 2, 3, 4, 5, and 6 variables. Milestone 1 is specifically a four-variable map.
 
 | Variables | Layout |
 |-----------|--------|
@@ -43,7 +43,7 @@ Gray-code headers everywhere. Wraparound on all edges within a layer.
 - Tapping a legend group outlines its cells.
 - Presets for each variable count, plus a Clear button.
 
-## Must-have extras
+## Later extras
 
 - SOP / POS toggle (POS groups 0s).
 - Minterm list in the form `F = Σm(...) + d(...)`.
@@ -60,7 +60,7 @@ Gray-code headers everywhere. Wraparound on all edges within a layer.
 - Map and answer are visible on load with no setup. Variable count is one segmented row. Extras live in collapsible panels. A new user can solve something in under 10 seconds without instructions.
 - Optional: shareable URL state.
 
-## Tests and CI
+## Future solver validation and CI
 
 - Solver checked against a brute-force minimal cover for every 2- and 3-variable function, including don't cares where feasible.
 - Known 4-, 5-, and 6-variable cases.
@@ -68,9 +68,24 @@ Gray-code headers everywhere. Wraparound on all edges within a layer.
 - POS tests.
 - CI runs the tests with GitHub Actions (`node --test`).
 
-## Later milestones (not part of the first solver or mockup PRs)
+## Milestones
 
-- GitHub Pages deploy workflow on every merge to `main`.
+### Milestone 1: playable four-variable app and Pages
+
+- A root-level `index.html`, separate CSS and UI JavaScript, and a small `solve4.js` solver module.
+- A playable 4×4 map with 0/1/X cycling, live minimal SOP, exact smallest cover for four variables, colored groups, and selectable group rows.
+- Warm light and dark themes, a visible theme toggle, the baseline presets plus the concept example, and Clear.
+- GitHub Pages deployment on pushes to `main`, publishing only the browser app files.
+
+### Later milestones
+
+- 2-, 3-, 5-, and 6-variable layouts and a variable-count control.
+- Full Quine-McCluskey and Petrick/branch-and-bound solver shared across map sizes.
+- SOP / POS toggle, minterm list, truth table, and explanations.
+- CI coverage for all supported map sizes and solver modes.
+
+## Deferred product details
+
 - README in the bandctl style: badges, one-line pitch, live demo link, hero GIF or screenshot, feature bullets, how the solver works (QM + cover), architecture sketch, screenshots for light / dark / phone, honest limitations, MIT license.
 - `v1.0.0` release.
 
