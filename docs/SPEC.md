@@ -44,7 +44,7 @@ Every axis uses Gray-code headers. Map cells use `positionToMinterm` and `minter
 - Each chosen group has its own color.
 - Grouped cells get a tint plus a small colored dot per group membership. Overlapping groups are allowed, so a cell may have several dots.
 - The legend shows a swatch, term, and covered cell count. Selecting a legend row outlines its cells, including cells on other layers.
-- Layer tabs are at least 44px tall. On narrow screens, 5- and 6-variable maps show one layer at a time; tabs mark layers that contain outlined cells. On wide screens, both 5-variable layers and all four 6-variable layers are visible.
+- 5- and 6-variable maps always show every layer, each with a small label above it (A=0 / A=1, or AB=00 and the other Gray-code labels). On a wide screen, 5-variable layers sit side by side and 6-variable layers use a 2×2 Gray-code arrangement. On a phone, the layers stack vertically. There are no layer tab buttons.
 
 ## UI
 

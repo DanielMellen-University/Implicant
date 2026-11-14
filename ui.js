@@ -6,7 +6,6 @@ let nVars = 4;
 let values = [...initialValues];
 let selectedGroup = -1;
 let selectedPaint = 0;
-let activeLayer = 0;
 let paintingPointer = null;
 let cycleTaps = true;
 let form = 'SOP';
@@ -15,7 +14,6 @@ const map = document.querySelector('#kmap');
 const expression = document.querySelector('#expression');
 const legend = document.querySelector('#legend');
 const variableControl = document.querySelector('#variable-count');
-const layerTabs = document.querySelector('#layer-tabs');
 const truthTable = document.querySelector('#truth-table');
 const mintermList = document.querySelector('#minterm-list');
 const explanation = document.querySelector('#explanation');
@@ -91,31 +89,13 @@ function renderVariableControl() {
   }
 }
 
-function renderLayerTabs(layout, outlinedLayers) {
-  layerTabs.replaceChildren();
-  const hasLayers = layout.layerCount > 1;
-  layerTabs.classList.toggle('has-tabs', hasLayers);
-  if (!hasLayers) return;
-  layout.layerHeaders.forEach((header, index) => {
-    const tab = element('button', 'layer-tab', `${layout.layerVariables}=${header}`);
-    tab.type = 'button';
-    tab.dataset.layerTab = String(index);
-    tab.setAttribute('role', 'tab');
-    tab.setAttribute('aria-selected', String(index === activeLayer));
-    tab.setAttribute('aria-label', `Show layer ${layout.layerVariables} equals ${header}`);
-    if (outlinedLayers.has(index)) tab.classList.add('has-outline');
-    layerTabs.append(tab);
-  });
-}
-
 function buildLayer(layout, layerIndex, groups) {
   const layer = element('section', 'map-layer');
   layer.dataset.layer = String(layerIndex);
   layer.setAttribute('aria-label', layout.layerCount === 1 ? 'Karnaugh map' : `${layout.layerVariables} = ${layout.layerHeaders[layerIndex]} layer`);
   if (layout.layerCount > 1) {
-    layer.append(element('h2', 'layer-title', `${layout.layerVariables} = ${layout.layerHeaders[layerIndex]}`));
+    layer.append(element('h2', 'layer-title', `${layout.layerVariables}=${layout.layerHeaders[layerIndex]}`));
   }
-  if (layerIndex !== activeLayer) layer.hidden = true;
 
   const grid = element('div', 'layer-grid');
   grid.style.setProperty('--cols', String(layout.columnCount));
@@ -171,8 +151,8 @@ function buildMap(layout, groups) {
     const layer = buildLayer(layout, index, groups);
     const position = layout.layerPositions[index];
     if (layout.layerCount === 4) {
-      layer.style.gridRow = String(position.row + 1);
-      layer.style.gridColumn = String(position.col + 1);
+      layer.style.setProperty('--layer-row', String(position.row + 1));
+      layer.style.setProperty('--layer-col', String(position.col + 1));
     }
     map.append(layer);
   });
@@ -252,14 +232,8 @@ function render() {
   if (selectedGroup >= result.groups.length) selectedGroup = -1;
   const focusedMinterm = document.activeElement?.dataset?.minterm;
   const focusedGroup = document.activeElement?.dataset?.group;
-  const focusedTab = document.activeElement?.dataset?.layerTab;
   const focusedTruth = document.activeElement?.dataset?.truthMinterm;
-  const outlinedLayers = new Set();
-  if (selectedGroup >= 0) {
-    for (const minterm of result.groups[selectedGroup].minterms) outlinedLayers.add(mintermToPosition(minterm, nVars).layer);
-  }
   buildMap(layout, result.groups);
-  renderLayerTabs(layout, outlinedLayers);
   document.querySelector('#answer-label').textContent = `Minimal ${form}`;
   expression.textContent = `F = ${displayExpression(result.expression)}`;
   buildLegend(result.groups);
@@ -273,7 +247,6 @@ function render() {
   document.querySelector('#cycle-mode').setAttribute('aria-pressed', String(cycleTaps));
   if (focusedMinterm !== undefined) map.querySelector(`[data-minterm="${focusedMinterm}"]`)?.focus();
   else if (focusedGroup !== undefined) legend.querySelector(`[data-group="${focusedGroup}"]`)?.focus();
-  else if (focusedTab !== undefined) layerTabs.querySelector(`[data-layer-tab="${focusedTab}"]`)?.focus();
   else if (focusedTruth !== undefined) truthTable.querySelector(`[data-truth-minterm="${focusedTruth}"]`)?.focus();
   updateUrl();
 }
@@ -314,7 +287,6 @@ variableControl.addEventListener('click', (event) => {
   const focusedCount = button.dataset.vars;
   nVars = Number(button.dataset.vars);
   values = Array(2 ** nVars).fill(0);
-  activeLayer = 0;
   selectedGroup = -1;
   renderVariableControl();
   render();
@@ -333,13 +305,6 @@ document.querySelector('.paint-control').addEventListener('click', (event) => {
 document.querySelector('#cycle-mode').addEventListener('click', (event) => {
   cycleTaps = !cycleTaps;
   event.currentTarget.setAttribute('aria-pressed', String(cycleTaps));
-});
-
-layerTabs.addEventListener('click', (event) => {
-  const tab = event.target.closest('[data-layer-tab]');
-  if (!tab) return;
-  activeLayer = Number(tab.dataset.layerTab);
-  render();
 });
 
 map.addEventListener('pointerdown', (event) => {
