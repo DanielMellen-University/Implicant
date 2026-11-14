@@ -1,6 +1,5 @@
 import { getLayout, mintermToPosition, positionToMinterm, solve } from './solver.js';
-
-const GROUP_COLORS = ['#7F77DD', '#1D9E75', '#D85A30', '#378ADD', '#BA7517', '#D4537E', '#639922', '#888780'];
+import { groupColor, randomizeValues } from './helpers.js';
 const initialValues = [1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0];
 let nVars = 4;
 let values = [...initialValues];
@@ -59,7 +58,7 @@ function groupTint(color) {
 }
 
 function cellBackground(memberships) {
-  const colors = memberships.map((index) => groupTint(GROUP_COLORS[index % GROUP_COLORS.length]));
+  const colors = memberships.map((index) => groupTint(groupColor(index)));
   if (colors.length === 1) return colors[0];
   const stops = colors.map((color, index) => {
     const start = (index / colors.length) * 100;
@@ -122,7 +121,7 @@ function buildLayer(layout, layerIndex, groups) {
         cell.style.background = cellBackground(memberships);
       }
       if (selectedGroup >= 0 && memberships.includes(selectedGroup)) {
-        cell.style.outline = `2px solid ${GROUP_COLORS[selectedGroup % GROUP_COLORS.length]}`;
+        cell.style.outline = `2px solid ${groupColor(selectedGroup)}`;
         cell.style.outlineOffset = '-2px';
       }
       cell.append(element('span', 'cell-number', String(minterm)));
@@ -132,7 +131,7 @@ function buildLayer(layout, layerIndex, groups) {
         dots.setAttribute('aria-hidden', 'true');
         for (const index of memberships) {
           const dot = element('i', 'cell-dot');
-          dot.style.backgroundColor = GROUP_COLORS[index % GROUP_COLORS.length];
+          dot.style.backgroundColor = groupColor(index);
           dots.append(dot);
         }
         cell.append(dots);
@@ -166,9 +165,9 @@ function buildLegend(groups) {
     row.dataset.group = String(index);
     row.setAttribute('aria-pressed', String(selectedGroup === index));
     row.setAttribute('aria-label', `${displayExpression(group.term)}, covers ${group.minterms.length} cell${group.minterms.length === 1 ? '' : 's'}`);
-    if (selectedGroup === index) row.style.borderColor = GROUP_COLORS[index % GROUP_COLORS.length];
+    if (selectedGroup === index) row.style.borderColor = groupColor(index);
     const swatch = element('span', 'legend-swatch');
-    swatch.style.backgroundColor = GROUP_COLORS[index % GROUP_COLORS.length];
+    swatch.style.backgroundColor = groupColor(index);
     row.append(swatch, element('span', 'legend-term', displayExpression(group.term)));
     row.append(element('span', 'legend-count', `covers ${group.minterms.length} cell${group.minterms.length === 1 ? '' : 's'}`));
     legend.append(row);
@@ -340,10 +339,7 @@ legend.addEventListener('click', (event) => {
 });
 
 document.querySelector('#randomize').addEventListener('click', () => {
-  values = Array.from({ length: 2 ** nVars }, () => Math.random() < 0.48 ? 1 : 0);
-  const xCount = Math.min(4, Math.max(1, Math.round(values.length * 0.045)));
-  const xCells = values.map((_, minterm) => minterm).sort(() => Math.random() - 0.5).slice(0, xCount);
-  for (const minterm of xCells) values[minterm] = 2;
+  values = randomizeValues(2 ** nVars);
   selectedGroup = -1;
   render();
 });

@@ -33,7 +33,7 @@ Every axis uses Gray-code headers. Map cells use `positionToMinterm` and `minter
 - Output is `0` if there are no 1s, and `1` if everything is covered.
 - Quine–McCluskey finds prime implicants. X cells are usable but never required.
 - Essential primes are selected first, then an exact smallest cover is chosen. The solver must stay responsive at 64 cells.
-- Randomize fills the current map with mostly 0 and 1 values and a few X values. Clear sets every cell to 0.
+- Randomize fills the current map by giving every cell an independent 1/3 chance of 0, 1, or X. Clear sets every cell to 0.
 - The minterm list reports the input ones as `F = Σm(...)` and includes `+ d(...)` only when there are don't cares.
 - The truth table lists every input combination. Its F buttons update the same canonical map values, and map edits immediately update the corresponding table row.
 - The collapsible explanation panel explains the kept and dropped variables for a legend group. Selecting a group outlines its cells and opens the explanation.
@@ -41,7 +41,7 @@ Every axis uses Gray-code headers. Map cells use `positionToMinterm` and `minter
 
 ## Visualization
 
-- Each chosen group has its own color.
+- Each chosen group has its own color. The first 16 groups use a hand-picked dark-theme palette; later groups get procedurally spaced OKLCH hues so no two groups in one solution share a color.
 - Grouped cells get a tint plus a small colored dot per group membership. Overlapping groups are allowed, so a cell may have several dots.
 - The legend shows a swatch, term, and covered cell count. Selecting a legend row outlines its cells, including cells on other layers.
 - 5- and 6-variable maps always show every layer, each with a small label above it (A=0 / A=1, or AB=00 and the other Gray-code labels). On a wide screen, 5-variable layers sit side by side and 6-variable layers use a 2×2 Gray-code arrangement. On a phone, the layers stack vertically. There are no layer tab buttons.
