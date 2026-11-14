@@ -54,6 +54,19 @@ test('Cycle is the default and advances once per activation', async ({ page, isM
   await expect(paintOne).toHaveAttribute('aria-pressed', 'true');
 });
 
+test('POS ones use neutral map cells and the truth table uses value colors', async ({ page }) => {
+  await page.goto('/?v=2&cells=0121&form=POS');
+  await expect(mapCell(page, 1)).toHaveCSS('background-color', 'rgb(24, 24, 23)');
+
+  await page.getByRole('button', { name: 'Truth Table', exact: true }).click();
+  await expect(page.locator('.truth-value[data-value="1"]').first())
+    .toHaveCSS('background-color', 'rgb(58, 50, 34)');
+  await expect(page.locator('.truth-value[data-value="0"]').first())
+    .toHaveCSS('background-color', 'rgb(24, 24, 23)');
+  await expect(page.locator('.truth-value[data-value="2"]').first())
+    .toHaveCSS('background-color', 'rgb(42, 42, 41)');
+});
+
 test('three-way splits survive group selection and highlight across layers', async ({ page, isMobile }) => {
   await page.goto(`/?v=6&cells=${layerExample}&form=SOP`);
   await expect(page.locator('.map-layer')).toHaveCount(4);

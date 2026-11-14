@@ -186,6 +186,11 @@ h2 { font-size: 17px; font-weight: 650; letter-spacing: -.02em; }
   --value-bg: #233d39;
   --value-ink: #b4e1d3;
 }
+[data-form="POS"] .cell[data-value="1"] {
+  --value-bg: #181817;
+  --value-border: #4a4844;
+  --value-ink: #d2cfc8;
+}
 :is([data-value="2"], [data-paint="2"]) { --value-border: #656563; }
 [data-value="2"] {
   --value-bg: #2b3039;
@@ -349,6 +354,14 @@ h2 { font-size: 17px; font-weight: 650; letter-spacing: -.02em; }
   background-color: var(--value-bg);
   color: var(--value-ink);
   font-family: var(--mono);
+}
+.truth-value[data-value="1"] {
+  --value-bg: var(--accent-bg);
+  --value-ink: var(--accent);
+}
+.truth-value[data-value="2"] {
+  --value-bg: #2a2a29;
+  --value-ink: #d2cfc8;
 }
 .truth-value:focus-visible { outline-offset: -3px; }
 

@@ -303,6 +303,7 @@ function buildExplanation(groups) {
 }
 
 function render() {
+  document.documentElement.dataset.form = form;
   const result = solve(cellsForSolver(), nVars, { form });
   solutionGroups = result.groups;
   groupColors = colorsForGroups(solutionGroups, stageColor, groupColors);
