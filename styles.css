@@ -93,7 +93,7 @@ button:focus-visible { outline: 2px solid var(--text-secondary); outline-offset:
 .answer-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .answer-label { color: var(--text-secondary); font-size: 12px; }
 .form-control .segment-row { gap: 2px; padding: 2px; }
-.form-control .segment-row button { min-width: 48px; min-height: 40px; padding: 0 8px; font-size: 12px; }
+.form-control .segment-row button { min-width: 48px; min-height: 44px; padding: 0 8px; font-size: 12px; }
 .expression { overflow-wrap: anywhere; font-size: 24px; font-weight: 500; line-height: 1.5; }
 .legend { display: grid; gap: 6px; margin-top: 10px; }
 .legend:empty { display: none; }
