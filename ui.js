@@ -1,5 +1,5 @@
 import { getLayout, positionToMinterm, solve } from './solver.js';
-import { colorsForGroups, randomizeValues } from './helpers.js?v=3';
+import { colorsForGroups, randomizeValues } from './helpers.js?v=4';
 const initialValues = [1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0];
 let nVars = 4;
 let values = [...initialValues];

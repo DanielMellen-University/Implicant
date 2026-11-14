@@ -1,13 +1,12 @@
 // Shared UI helpers with no DOM, so tests can import them directly.
 
-/** Group accents that progress from cool to warm, with extra shades for dense maps. */
+/** Start with distinct hues and add alternate shades for denser maps. */
 export const GROUP_PALETTE = [
-  '#8bb6e6', '#a6a9de', '#b8a1df', '#d899b3', '#de8b86', '#e2ac79',
-  '#d8c778', '#a9c889', '#79c9c1', '#b4c4ca', '#98b276', '#c496d4',
-  '#78b0ab', '#d9aeaa', '#8cace0', '#aebd8d', '#e1b69d', '#9e95c5',
-  '#9dc2d5', '#c98fa0', '#c3b48f', '#82a7ba', '#a1c3a4', '#cf9dbf',
-  '#a6c3ed', '#c2aa99', '#92ada7', '#e2bdce', '#b9adca', '#c5cc9b',
-  '#d6ac8d', '#8fbfcf',
+  // Red, blue, green, yellow, purple, orange, pink, teal.
+  '#de8b86', '#8bb6e6', '#a9c889', '#d8c778', '#b8a1df', '#e2ac79', '#d899b3', '#79c9c1',
+  '#d9aeaa', '#8cace0', '#98b276', '#c3b48f', '#c496d4', '#e1b69d', '#c98fa0', '#78b0ab',
+  '#cf9dbf', '#a6a9de', '#aebd8d', '#d6ac8d', '#9e95c5', '#9dc2d5', '#e2bdce', '#a1c3a4',
+  '#b4c4ca', '#c2aa99', '#a6c3ed', '#c5cc9b', '#b9adca', '#82a7ba', '#92ada7', '#8fbfcf',
 ];
 
 /** Keep colors for terms still in the solution and reuse freed colors. */
