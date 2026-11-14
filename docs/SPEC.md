@@ -1,6 +1,6 @@
 # Implicant specification
 
-Interactive Karnaugh map solver: a simple, touch-friendly portfolio piece with a live GitHub Pages demo.
+A simple, touch-friendly interactive Karnaugh map solver with a live GitHub Pages demo.
 
 Visual direction: warm paper light theme and warm charcoal dark theme; minterm numbers in the top-left of each cell; tinted group cells with colored dots; live output like `F = A′C′ + AB′ + A′BD′`; and a group legend with a swatch, term, and cell count.
 
