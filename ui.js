@@ -1,4 +1,4 @@
-import { solve4 } from './solve4.js';
+import { solve } from './solver.js';
 
 const GROUP_COLORS = ['#7F77DD', '#1D9E75', '#D85A30', '#378ADD', '#BA7517', '#D4537E', '#639922', '#888780'];
 const GRAY_ORDER = [0, 1, 3, 2];
@@ -9,6 +9,15 @@ const PRESETS = {
   concept: { ones: [0, 1, 4, 5, 6, 8, 9, 10, 11], dontCares: [] },
   clear: { ones: [], dontCares: [] },
 };
+
+
+function cellsForSolver(values) {
+  return values.map((value) => (value === 2 ? 'X' : value));
+}
+
+function displayExpression(expression) {
+  return expression.replaceAll("'", '′');
+}
 
 let values = Array(16).fill(0);
 let selectedGroup = -1;
@@ -37,7 +46,7 @@ function buildMap(groups) {
     map.append(element('div', 'map-heading', row.toString(2).padStart(2, '0')));
     for (const column of GRAY_ORDER) {
       const minterm = row * 4 + column;
-      const memberships = groups.flatMap((group, index) => group.cells.includes(minterm) ? [index] : []);
+      const memberships = groups.flatMap((group, index) => group.minterms.includes(minterm) ? [index] : []);
       const cell = element('button', 'cell');
       cell.type = 'button';
       cell.dataset.minterm = String(minterm);
@@ -75,23 +84,23 @@ function buildLegend(groups) {
     row.type = 'button';
     row.dataset.group = String(index);
     row.setAttribute('aria-pressed', String(selectedGroup === index));
-    row.setAttribute('aria-label', `${group.term}, covers ${group.cells.length} cell${group.cells.length === 1 ? '' : 's'}`);
+    row.setAttribute('aria-label', `${displayExpression(group.term)}, covers ${group.minterms.length} cell${group.minterms.length === 1 ? '' : 's'}`);
     if (selectedGroup === index) row.style.borderColor = GROUP_COLORS[index % GROUP_COLORS.length];
     const swatch = element('span', 'legend-swatch');
     swatch.style.backgroundColor = GROUP_COLORS[index % GROUP_COLORS.length];
-    row.append(swatch, element('span', 'legend-term', group.term));
-    row.append(element('span', 'legend-count', `covers ${group.cells.length} cell${group.cells.length === 1 ? '' : 's'}`));
+    row.append(swatch, element('span', 'legend-term', displayExpression(group.term)));
+    row.append(element('span', 'legend-count', `covers ${group.minterms.length} cell${group.minterms.length === 1 ? '' : 's'}`));
     legend.append(row);
   });
 }
 
 function render() {
-  const result = solve4(values);
+  const result = solve(cellsForSolver(values), 4);
   if (selectedGroup >= result.groups.length) selectedGroup = -1;
   const focusedMinterm = document.activeElement?.dataset?.minterm;
   const focusedGroup = document.activeElement?.dataset?.group;
   buildMap(result.groups);
-  expression.textContent = `F = ${result.expression}`;
+  expression.textContent = `F = ${displayExpression(result.expression)}`;
   buildLegend(result.groups);
   if (focusedMinterm !== undefined) {
     map.querySelector(`[data-minterm="${focusedMinterm}"]`)?.focus();
