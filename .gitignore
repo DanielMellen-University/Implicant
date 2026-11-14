@@ -1,0 +1,16 @@
+# Dependencies and caches
+node_modules/
+.npm/
+
+# OS and editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*~
+
+# Logs and local scratch
+*.log
+.codex/
+_reference/
