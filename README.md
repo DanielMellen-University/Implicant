@@ -16,7 +16,7 @@ Live demo: [danielmellen-university.github.io/Implicant](https://danielmellen-un
 - Maps for 2 through 6 variables, including two-layer 5-variable maps and four-layer 6-variable maps
 - A 0 / 1 / X paint selector, with tap-to-cycle on touch screens
 - Live minimal SOP or POS, with a unique color for every group
-- Split cell tints and colored dots when groups overlap
+- Slate 0s, teal 1s, and amber Xs, with split color strips for overlapping groups
 - A legend that outlines a group's cells, a minterm list, a truth table synced both ways with the map, and per-group explanations
 - Randomize (each cell independently 0, 1, or X) and Clear
 - A shareable URL that restores the current map
@@ -58,7 +58,7 @@ The solver is a plain ES module with no DOM, so the same code can be unit-tested
 | --- | --- |
 | ![Four-variable map on a desktop](docs/screenshots/desktop-4var.png) Four-variable map on a desktop. | ![The same map on a phone](docs/screenshots/phone-4var.png) The same map on a phone. |
 | ![Five-variable layers side by side](docs/screenshots/desktop-5var.png) Five-variable layers, side by side, each labeled A=0 or A=1. | ![Five-variable layers stacked on a phone](docs/screenshots/phone-5var.png) The same layers stacked on a phone. |
-| ![Six-variable 2×2 layers](docs/screenshots/desktop-6var.png) Six-variable layers in a 2×2 Gray-code arrangement. | ![A 6-variable map with nine distinctly colored overlapping groups](docs/screenshots/desktop-6var-groups.png) Overlapping groups keep unique colors, split tints, and membership dots. |
+| ![Six-variable 2×2 layers](docs/screenshots/desktop-6var.png) Six-variable layers in a 2×2 Gray-code arrangement. | ![A 6-variable map with nine distinctly colored overlapping groups](docs/screenshots/desktop-6var-groups.png) Earlier six-variable view showing overlapping groups. |
 
 ## Project layout
 

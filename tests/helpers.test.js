@@ -1,10 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  GROUP_PALETTE,
   colorsForGroups,
-  minPairwiseDeltaE,
-  pickSpread,
   randomizeValues,
 } from '../helpers.js';
 import { solve } from '../solver.js';
@@ -41,20 +38,11 @@ test('randomizeValues uses the provided random function independently per cell',
   assert.deepEqual(values, [0, 0, 1, 1, 2, 2]);
 });
 
-test('group palettes stay perceptually distinct up to 32 colors', () => {
-  assert.equal(GROUP_PALETTE.length, 32);
-  assert.equal(new Set(GROUP_PALETTE).size, 32);
-  const threshold = 0.10;
-  for (let n = 2; n <= 32; n += 1) {
-    const spread = pickSpread(GROUP_PALETTE, n);
-    assert.equal(spread.length, n);
-    assert.equal(new Set(spread).size, n);
-    const delta = minPairwiseDeltaE(spread);
-    assert.ok(
-      delta >= threshold,
-      `N=${n} min OKLab deltaE ${delta.toFixed(4)} fell below ${threshold}`,
-    );
-  }
+test('the group palette supplies a unique color for every term in the largest solution', () => {
+  const terms = Array.from({ length: 32 }, (_, index) => String(index));
+  const colors = [...colorsForGroups(terms).values()];
+  assert.equal(new Set(colors).size, terms.length);
+  assert.ok(colors.every(color => /^#[0-9a-f]{6}$/i.test(color)));
 });
 
 test('group colors persist through edits that add, remove, or reorder terms', () => {

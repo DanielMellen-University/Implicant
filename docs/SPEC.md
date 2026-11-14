@@ -41,8 +41,7 @@ Every axis uses Gray-code headers. Map cells use `positionToMinterm` and `minter
 
 ## Visualization
 
-- Each chosen group has its own color. The first 16 groups use a hand-picked dark-theme palette; later groups get procedurally spaced OKLCH hues so no two groups in one solution share a color.
-- Grouped cells get a tint plus a small colored dot per group membership. Overlapping groups are allowed, so a cell may have several dots.
+- Cell fills identify values: slate for 0, teal for 1, and amber for X. Group colors stay assigned while a term remains in the solution. A strip along the bottom of each grouped cell shows one segment per membership.
 - The legend shows a swatch, term, and covered cell count. Selecting a legend row outlines its cells, including cells on other layers.
 - 5- and 6-variable maps always show every layer, each with a small label above it (A=0 / A=1, or AB=00 and the other Gray-code labels). On a wide screen, 5-variable layers sit side by side and 6-variable layers use a 2×2 Gray-code arrangement. On a phone, the layers stack vertically. There are no layer tab buttons.
 
@@ -53,7 +52,7 @@ Every axis uses Gray-code headers. Map cells use `positionToMinterm` and `minter
 - Touch targets are at least 44px. Controls have instant active feedback and do not rely on hover.
 - The map and live answer are visible on load with the four-variable example. Extras are in clearly labeled collapsible panels so the demo remains immediately playable.
 - The current controls are the 2–6 variable selector, 0 / 1 / X paint selector, touch Cycle taps control, Randomize, and Clear.
-- Multi-group cells use hard-stop split tints and colored dots, with a legend that outlines selected group cells across layers.
+- The legend outlines the selected group across layers.
 - The 6-variable truth table is contained in a scrollable region. Layouts fit narrow phones without reducing map cells below 44px or introducing horizontal page overflow.
 
 ## Future solver validation and CI

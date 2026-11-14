@@ -1,5 +1,5 @@
 import { getLayout, positionToMinterm, solve } from './solver.js';
-import { colorsForGroups, randomizeValues } from './helpers.js?v=2';
+import { colorsForGroups, randomizeValues } from './helpers.js?v=3';
 const initialValues = [1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0];
 let nVars = 4;
 let values = [...initialValues];
@@ -73,17 +73,12 @@ function element(tag, className, text) {
   return node;
 }
 
-function groupTint(color) {
-  return `color-mix(in srgb, ${color} 32%, var(--bg))`;
-}
-
-function cellBackground(colors) {
-  if (colors.length === 0) return '';
-  if (colors.length === 1) return groupTint(colors[0]);
+function groupBand(colors) {
+  if (colors.length <= 1) return colors[0] ?? '';
   const stops = colors.map((color, index) => {
     const start = (index / colors.length) * 100;
     const end = ((index + 1) / colors.length) * 100;
-    return `${groupTint(color)} ${start}% ${end}%`;
+    return `${color} ${start}% ${end}%`;
   });
   return `linear-gradient(to right, ${stops.join(', ')})`;
 }
@@ -161,10 +156,8 @@ function buildLayer(layout, layerIndex) {
       const fill = element('span', 'cell-fill');
       const fade = element('span', 'cell-fade');
       const value = element('span', 'cell-value');
-      const dots = element('span', 'cell-dots');
-      dots.setAttribute('aria-hidden', 'true');
-      cell.append(fill, fade, element('span', 'cell-number', String(minterm)), value, dots);
-      mapCells[minterm] = { cell, fill, fade, value, dots, colors: '' };
+      cell.append(fill, fade, element('span', 'cell-number', String(minterm)), value);
+      mapCells[minterm] = { cell, fill, fade, value, colors: '' };
       grid.append(cell);
     }
   }
@@ -194,8 +187,9 @@ function updateMap(groups, animate) {
   }
   const highlightedGroup = groups[selectedGroup];
   mapCells.forEach((state, minterm) => {
-    const { cell, fill, fade, value, dots } = state;
+    const { cell, fill, fade, value } = state;
     const output = values[minterm];
+    cell.dataset.value = String(output);
     value.textContent = output === 2 ? 'X' : String(output);
     cell.setAttribute('aria-label', `Minterm ${minterm}: ${output === 2 ? 'don’t care' : output}`);
     cell.style.setProperty('--highlight', highlightedGroup?.minterms.includes(minterm)
@@ -206,16 +200,19 @@ function updateMap(groups, animate) {
     if (state.colors === key) return;
     if (animate) {
       tintAnimations.get(fade)?.cancel();
-      fade.style.background = fill.style.background || 'var(--bg)';
-      const animation = fade.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 180, easing: 'ease-out' });
-      tintAnimations.set(fade, animation);
+      const oldBand = fill.style.background;
+      if (oldBand) {
+        fade.style.background = oldBand;
+        tintAnimations.set(fade, fade.animate(
+          [{ opacity: 1 }, { opacity: 0 }], { duration: 180, easing: 'ease-out' },
+        ));
+      } else {
+        tintAnimations.set(fade, fill.animate(
+          [{ opacity: 0 }, { opacity: 1 }], { duration: 180, easing: 'ease-out' },
+        ));
+      }
     }
-    fill.style.background = cellBackground(colors);
-    dots.replaceChildren(...colors.map(color => {
-      const dot = element('i', 'cell-dot');
-      dot.style.backgroundColor = color;
-      return dot;
-    }));
+    fill.style.background = groupBand(colors);
     state.colors = key;
   });
 }
