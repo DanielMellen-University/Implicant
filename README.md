@@ -1,0 +1,2 @@
+# Implicant
+K-Map solver
