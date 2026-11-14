@@ -42,11 +42,38 @@
 
         <aside class="solution">
           <section class="answer" aria-live="polite" aria-atomic="true">
-            <div class="answer-label">Minimal expression</div>
+            <div class="answer-heading">
+              <div id="answer-label" class="answer-label">Minimal SOP</div>
+              <fieldset class="segmented form-control" aria-label="Expression form">
+                <legend>Expression form</legend>
+                <div class="segment-row">
+                  <button type="button" data-form="SOP" aria-pressed="true">SOP</button>
+                  <button type="button" data-form="POS" aria-pressed="false">POS</button>
+                </div>
+              </fieldset>
+            </div>
             <div id="expression" class="expression">F = 0</div>
           </section>
           <section id="legend" class="legend" aria-label="Selected groups"></section>
         </aside>
+      </section>
+
+      <section class="extras" aria-label="Solver details">
+        <details class="extra-panel">
+          <summary>Minterm list</summary>
+          <p id="minterm-list" class="detail-copy"></p>
+        </details>
+        <details class="extra-panel">
+          <summary>Truth table</summary>
+          <div class="truth-table-scroll">
+            <table id="truth-table" class="truth-table"></table>
+          </div>
+          <p class="detail-note">Select a row’s F value to set it to the chosen paint value.</p>
+        </details>
+        <details id="explanation-panel" class="extra-panel">
+          <summary>Why these groups work</summary>
+          <div id="explanation" class="detail-copy"></div>
+        </details>
       </section>
     </main>
   </body>
