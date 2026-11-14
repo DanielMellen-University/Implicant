@@ -185,9 +185,9 @@ h2 { font-size: 17px; font-weight: 650; letter-spacing: -.02em; }
 }
 .map-heading.corner { color: var(--muted); font-size: 10px; }
 :is([data-value="0"], [data-paint="0"]) {
-  --value-bg: #2b3039;
-  --value-border: #505d70;
-  --value-ink: #c9d4e3;
+  --value-bg: #181817;
+  --value-border: #4a4844;
+  --value-ink: #d2cfc8;
 }
 :is([data-value="1"], [data-paint="1"]) {
   --value-bg: #233d39;
@@ -195,9 +195,9 @@ h2 { font-size: 17px; font-weight: 650; letter-spacing: -.02em; }
   --value-ink: #b4e1d3;
 }
 :is([data-value="2"], [data-paint="2"]) {
-  --value-bg: #413426;
-  --value-border: #806543;
-  --value-ink: #efd2a1;
+  --value-bg: #2b3039;
+  --value-border: #505d70;
+  --value-ink: #c9d4e3;
 }
 .segment-row button[data-paint] { color: var(--value-ink); }
 .segment-row button[data-paint][aria-pressed="true"] {
