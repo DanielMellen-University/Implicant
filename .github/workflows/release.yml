@@ -1,0 +1,49 @@
+name: Publish release
+
+on:
+  push:
+    tags:
+      - 'v[0-9]*'
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: npx playwright install --with-deps --only-shell chromium
+      - run: npm run test:browser
+
+  publish:
+    needs: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Publish the tagged version
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          release_notes="$(mktemp)"
+          awk -v heading="## $RELEASE_TAG" '
+            $0 == heading { found = 1; next }
+            found && /^## / { exit }
+            found { print }
+          ' docs/RELEASES.md > "$release_notes"
+          test -s "$release_notes"
+          gh release create "$RELEASE_TAG" --verify-tag --title "Implicant $RELEASE_TAG" --notes-file "$release_notes"

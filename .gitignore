@@ -14,3 +14,7 @@ Thumbs.db
 *.log
 .codex/
 _reference/
+
+# Browser test output
+playwright-report/
+test-results/

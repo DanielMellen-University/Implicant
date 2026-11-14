@@ -1,97 +1,56 @@
-# Implicant
+<h1 align="center"><img src="favicon.svg" alt="Implicant" width="96" height="96"></h1>
 
-[![tests](https://github.com/DanielMellen-University/Implicant/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/DanielMellen-University/Implicant/actions/workflows/ci.yml)
-[![License: MIT](https://img.shields.io/badge/license-MIT-8fd19a)](LICENSE)
+<p align="center"><strong>Interactive Karnaugh Map Solver</strong></p>
 
-**A touch-friendly Karnaugh Map Solver in the browser.**
+<p align="center">
+  <a href="https://github.com/DanielMellen-University/Implicant/actions/workflows/ci.yml"><img alt="Tests" src="https://github.com/DanielMellen-University/Implicant/actions/workflows/ci.yml/badge.svg?branch=main"></a>
+  <a href="docs/SPEC.md"><img alt="JavaScript ES modules" src="https://img.shields.io/badge/JavaScript-ES%20modules-dcc485"></a>
+  <a href="#run-locally"><img alt="Node.js 22+" src="https://img.shields.io/badge/Node.js-22%2B-417e38"></a>
+  <a href="LICENSE"><img alt="MIT license" src="https://img.shields.io/badge/license-MIT-8fd19a"></a>
+</p>
 
-Paint cells as 0, 1, or X, and Implicant updates a minimal sum of products as you go. It also has a product-of-sums mode, a synchronized truth table, and a short explanation of why each group drops a variable. Everything runs in the page, with no build step.
+<p align="center">
+  <a href="https://danielmellen-university.github.io/Implicant/"><strong>Live Demo</strong></a> ·
+  <a href="docs/GUIDE.md">User Guide</a> ·
+  <a href="docs/SPEC.md">How It Works</a> ·
+  <a href="https://github.com/DanielMellen-University/Implicant/releases">Releases</a>
+</p>
 
-Live demo: [danielmellen-university.github.io/Implicant](https://danielmellen-university.github.io/Implicant/)
+Implicant simplifies Boolean functions with two to six variables. Edit the Karnaugh map or truth table to see the minimal sum of products (SOP) or product of sums (POS), then select a group to see which cells it covers.
 
-![A four-variable map with two colored groups and the live expression F = A′C′ + AB′](docs/screenshots/desktop-4var.png)
+[![Six-variable Implicant workspace with four map layers, overlapping groups, and a selected group highlighted across layers](docs/screenshots/implicant-hero.png)](https://danielmellen-university.github.io/Implicant/)
 
-## Features
+## Try it
 
-- Maps for 2 through 6 variables, including two-layer 5-variable maps and four-layer 6-variable maps
-- A 0 / 1 / X / Cycle selector for fixed painting or cycling on click and tap
-- Live minimal SOP or POS, with a unique color for every group
-- Muted group fills with full-cell splits and colored dots for overlapping groups
-- A legend that outlines a group's cells, a minterm list, a truth table synced both ways with the map, and per-group explanations
-- Randomize (each cell independently 0, 1, or X) and Clear
-- A shareable URL that restores the current map
-- A dark theme, laid out for phones and desktops
+1. Open [Live Demo](https://danielmellen-university.github.io/Implicant/) and choose **0**, **1**, **X** (don't care), or **Cycle**.
+2. Edit a cell. The expression, minterms, and truth table update from the same input.
+3. Select a term under **Groups** to highlight its cells. Open **Why-Groups** to see which variables stay fixed and which drop out.
 
-## Quick start
-
-Open the [live demo](https://danielmellen-university.github.io/Implicant/). From a checkout, serve the files and open the page:
-
-```
-python3 -m http.server
-```
-
-Then visit `http://127.0.0.1:8000/`. Any static file server works. The app is `index.html`, `styles.css`, `ui.js`, `solver.js`, and `helpers.js`.
+The address bar holds the current map and expression form. Copy the URL to share a reproducible example.
 
 ## How it works
 
-```
-cells ──► Quine–McCluskey primes ──► essential primes
-                                      │
-                                      ▼
-                           exact minimum cover (fewest
-                           terms, then fewest literals)
-                                      │
-                                      ▼
-                           SOP or POS, group colors,
-                           explanations, and the minterm list
+The browser sends the map's values to a standalone JavaScript solver. Quine-McCluskey finds the largest legal groups, then an exact cover search minimizes the number of terms first and the total number of literals second. The UI uses that same result for the expression, cell highlights, and explanations. See the [solver walkthrough](docs/SPEC.md) for a worked example, the cover search, and the test strategy.
+
+## Run locally
+
+Serve the repository root with Python 3, then open `http://127.0.0.1:8000/`. The app uses native ES modules and runs with no build step or runtime packages.
+
+```sh
+python3 -m http.server 8000 --bind 127.0.0.1
 ```
 
-1. Quine–McCluskey finds the prime implicants. Don't-care cells can enlarge a group, but a group is never required to cover an X.
-2. Essential primes are taken first. If a cyclic chart remains, an exact search picks a cheapest cover: fewest terms, then fewest literals. Ties are broken deterministically.
-3. SOP groups the 1s. POS groups the 0s. The minterm list always describes the input ones, including any `d(...)` terms.
+Run the solver tests with Node.js 22 or newer. The browser suite also uses Python 3 to serve the app locally.
 
-The solver is a plain ES module with no DOM, so the same code can be unit-tested in Node and run in the page.
-
-## Screenshots
-
-| | |
-| --- | --- |
-| ![Four-variable map on a desktop](docs/screenshots/desktop-4var.png) Four-variable map on a desktop. | ![The same map on a phone](docs/screenshots/phone-4var.png) The same map on a phone. |
-| ![Five-variable layers side by side](docs/screenshots/desktop-5var.png) Five-variable layers, side by side, each labeled A=0 or A=1. | ![Five-variable layers stacked on a phone](docs/screenshots/phone-5var.png) The same layers stacked on a phone. |
-| ![Six-variable 2×2 layers](docs/screenshots/desktop-6var.png) Six-variable layers in a 2×2 Gray-code arrangement. | ![A 6-variable map with nine distinctly colored overlapping groups](docs/screenshots/desktop-6var-groups.png) Earlier six-variable view showing overlapping groups. |
-
-## Project layout
-
-```
-index.html      app shell
-styles.css      dark theme and layout
-ui.js           map rendering, paint mode, extras, and URL state
-solver.js       Gray layouts, Quine–McCluskey, exact cover, formatting
-helpers.js      group colors and the random-fill helper
-tests/          Node test suite (`node --test`, no extra dependencies)
-docs/SPEC.md    design notes
-docs/screenshots/
-.github/workflows/ci.yml      unit tests
-.github/workflows/pages.yml   deploy the app to GitHub Pages
+```sh
+npm test
+npm ci
+npx playwright install --only-shell chromium
+npm run test:browser
 ```
 
-## Limitations
-
-These are deliberate scope choices.
-
-- **Only 2 through 6 variables.** That is the usual Karnaugh-map range, and it keeps the exact cover search interactive at 64 cells.
-- **One minimal cover, not every minimal cover.** If two covers have the same number of terms and literals, the solver returns one of them and ignores the rest.
-- **SOP and POS only.** The solver does not search mixed forms or multi-output functions.
-- **Dark theme only.** There is no light palette.
-
-## Testing
-
-```
-node --test
-```
-
-The suite checks Gray-code layouts and adjacency, Quine–McCluskey and exact covers (including an exhaustive 2- and 3-variable check), POS, group explanations, unique group colors, and the random-fill helper. CI runs the same command on every push and pull request.
+GitHub Actions runs both suites on pushes and pull requests. The unit tests compare every two- and three-variable input against an independent solver. The Chromium suite runs on desktop and emulated mobile and checks map edits, URL restoration, group selection, and long expressions.
 
 ## License
 
-MIT. See [LICENSE](LICENSE).
+[MIT](LICENSE)

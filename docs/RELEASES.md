@@ -1,0 +1,12 @@
+# Release Notes
+
+## v1.0.0
+
+The first tagged release includes the interactive map editor, exact Boolean minimization, and a walkthrough of the solver.
+
+- Edit two- through six-variable maps with mouse, keyboard, or touch. Open the synchronized Truth Table to edit by input combination.
+- Switch between minimal SOP and POS. Inspect overlapping groups, minterms, and explanations of the variables in each term.
+- Share the current map and expression form through the URL.
+- Run the solver and helper tests in Node.js or exercise the app in desktop and mobile Chromium with Playwright.
+
+[Live Demo](https://danielmellen-university.github.io/Implicant/) · [User Guide](https://github.com/DanielMellen-University/Implicant/blob/v1.0.0/docs/GUIDE.md)
