@@ -1,10 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  GROUP_PALETTE,
   colorsForGroups,
   randomizeValues,
 } from '../helpers.js';
 import { solve } from '../solver.js';
+
+const stageColor = '#201f1e';
 
 function mulberry32(seed) {
   let t = seed >>> 0;
@@ -38,24 +41,50 @@ test('randomizeValues uses the provided random function independently per cell',
   assert.deepEqual(values, [0, 0, 1, 1, 2, 2]);
 });
 
-test('the group palette supplies a unique color for every term in the largest solution', () => {
-  const terms = Array.from({ length: 32 }, (_, index) => String(index));
-  const colors = [...colorsForGroups(terms).values()];
-  assert.equal(new Set(colors).size, terms.length);
-  assert.ok(colors.every(color => /^#[0-9a-f]{6}$/i.test(color)));
+test('32 disjoint checkerboard groups use every color in palette order', () => {
+  const cells = Array.from({ length: 64 }, (_, index) => index.toString(2).replaceAll('0', '').length % 2);
+  for (const form of ['SOP', 'POS']) {
+    const { groups } = solve(cells, 6, { form });
+    assert.equal(groups.length, 32);
+    const colors = [...colorsForGroups(groups, stageColor).values()];
+    assert.deepEqual(colors, GROUP_PALETTE);
+    assert.equal(new Set(colors).size, 32);
+  }
 });
 
-test('group colors persist through edits that add, remove, or reorder terms', () => {
-  const terms = ["A'C'E", 'BDE', "C'F"];
-  const initial = colorsForGroups(terms);
-  assert.deepEqual(colorsForGroups(terms), initial);
+test('new groups choose distinct fills for overlaps and skip unrelated colors in scoring', () => {
+  const groups = [
+    { term: 'A', minterms: [0, 1] },
+    { term: 'B', minterms: [0, 2] },
+    { term: 'C', minterms: [0, 3] },
+    { term: 'D', minterms: [4] },
+  ];
+  const expected = new Map([
+    ['A', '#de8b86'], // Red leads the palette.
+    ['B', '#79c9c1'], // Teal is farthest from the rendered red tint.
+    ['C', '#d8c778'], // Yellow maximizes distance to the closer of red and teal.
+    ['D', '#8bb6e6'], // Blue is the first unused color for a disjoint group.
+  ]);
+  assert.deepEqual(colorsForGroups(groups, stageColor), expected);
+});
 
-  const edited = colorsForGroups(['ADF', "C'F", 'BDE', 'ABC'], initial);
-  assert.equal(edited.get("C'F"), initial.get("C'F"));
-  assert.equal(edited.get('BDE'), initial.get('BDE'));
-  assert.equal(edited.get('ADF'), initial.get("A'C'E"));
-  assert.equal(edited.has("A'C'E"), false);
-  assert.equal(new Set(edited.values()).size, edited.size);
+test('edits keep surviving colors and reuse a removed group’s color', () => {
+  const a = { term: 'A', minterms: [0, 1] };
+  const b = { term: 'B', minterms: [2, 3] };
+  const c = { term: 'C', minterms: [4, 5] };
+  const initial = colorsForGroups([a, b, c], stageColor);
+  const edited = colorsForGroups([
+    { term: 'D', minterms: [2, 6] },
+    c,
+    b,
+    { term: 'E', minterms: [7] },
+  ], stageColor, initial);
+  assert.equal(edited.get('B'), initial.get('B'));
+  assert.equal(edited.get('C'), initial.get('C'));
+  assert.equal(edited.get('E'), initial.get('A'));
+  assert.equal(edited.has('A'), false);
+  assert.equal(edited.get('D'), '#d8c778');
+  assert.equal(new Set(edited.values()).size, 4);
 });
 
 test('the solver stays fast on a 6-variable map with about one third X cells', () => {

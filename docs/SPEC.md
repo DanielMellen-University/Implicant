@@ -1,6 +1,6 @@
 # Implicant specification
 
-Implicant is an interactive Karnaugh map solver with a live GitHub Pages demo.
+Implicant is an interactive Karnaugh Map Solver with a live GitHub Pages demo.
 
 ## Stack
 
@@ -41,7 +41,7 @@ Every axis uses Gray-code headers. Map cells use `positionToMinterm` and `minter
 
 ## Visualization
 
-- Each group has a muted cell fill and a matching dot. A cell that belongs to multiple groups splits its fill into equal segments. Group colors stay assigned while a term remains in the solution.
+- Each group has a muted cell fill and a matching dot. A cell that belongs to multiple groups splits its fill into equal segments. Groups keep their colors while their terms remain in the solution. New groups use palette order unless they overlap a colored group, in which case the solver view picks the available fill that is most distinct from its closest overlapping neighbor.
 - The legend shows a swatch, term, and covered cell count. Selecting a legend row outlines its cells, including cells on other layers.
 - 5- and 6-variable maps always show every layer, each with a small label above it (A=0 / A=1, or AB=00 and the other Gray-code labels). On a wide screen, 5-variable layers sit side by side and 6-variable layers use a 2×2 Gray-code arrangement. On a phone, the layers stack vertically. There are no layer tab buttons.
 

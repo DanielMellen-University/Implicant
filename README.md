@@ -3,7 +3,7 @@
 [![tests](https://github.com/DanielMellen-University/Implicant/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/DanielMellen-University/Implicant/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-8fd19a)](LICENSE)
 
-**A touch-friendly Karnaugh map solver in the browser.**
+**A touch-friendly Karnaugh Map Solver in the browser.**
 
 Paint cells as 0, 1, or X, and Implicant updates a minimal sum of products as you go. It also has a product-of-sums mode, a synchronized truth table, and a short explanation of why each group drops a variable. Everything runs in the page, with no build step.
 

@@ -9,16 +9,75 @@ export const GROUP_PALETTE = [
   '#b4c4ca', '#c2aa99', '#a6c3ed', '#c5cc9b', '#b9adca', '#82a7ba', '#92ada7', '#8fbfcf',
 ];
 
-/** Keep colors for terms still in the solution and reuse freed colors. */
-export function colorsForGroups(terms, previous = new Map()) {
+const GROUP_TINT_PERCENT = 38;
+
+export function groupTint(color) {
+  return `color-mix(in srgb, var(--stage), ${color} ${GROUP_TINT_PERCENT}%)`;
+}
+
+function rgbChannels(hex) {
+  return hex.slice(1).match(/../g).map(channel => parseInt(channel, 16) / 255);
+}
+
+function tintedOklab(color, background) {
+  const weight = GROUP_TINT_PERCENT / 100;
+  const [r, g, b] = rgbChannels(color).map((channel, index) => {
+    const mixed = channel * weight + background[index] * (1 - weight);
+    return mixed <= 0.04045 ? mixed / 12.92 : ((mixed + 0.055) / 1.055) ** 2.4;
+  });
+  const l = Math.cbrt(0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b);
+  const m = Math.cbrt(0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b);
+  const s = Math.cbrt(0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b);
+  return [
+    0.2104542553 * l + 0.7936177850 * m - 0.0040720468 * s,
+    1.9779984951 * l - 2.4285922050 * m + 0.4505937099 * s,
+    0.0259040371 * l + 0.7827717662 * m - 0.8086757660 * s,
+  ];
+}
+
+function nearestColorDistance(candidate, neighbors) {
+  return Math.min(...neighbors.map(neighbor => (
+    candidate.reduce((sum, channel, index) => sum + (channel - neighbor[index]) ** 2, 0)
+  )));
+}
+
+/** Keep surviving terms' colors and favor clearer splits when adding groups. */
+export function colorsForGroups(groups, stageColor, previous = new Map()) {
   const colors = new Map();
-  for (const term of terms) {
-    if (previous.has(term)) colors.set(term, previous.get(term));
+  const colorsByMinterm = new Map();
+  function assignColor(group, color) {
+    colors.set(group.term, color);
+    for (const minterm of group.minterms) {
+      if (!colorsByMinterm.has(minterm)) colorsByMinterm.set(minterm, []);
+      colorsByMinterm.get(minterm).push(color);
+    }
   }
+
+  for (const group of groups) {
+    if (previous.has(group.term)) assignColor(group, previous.get(group.term));
+  }
+  if (colors.size === groups.length) return colors;
+
   const inUse = new Set(colors.values());
-  const available = GROUP_PALETTE.filter(color => !inUse.has(color));
-  for (const term of terms) {
-    if (!colors.has(term)) colors.set(term, available.shift());
+  const available = new Set(GROUP_PALETTE.filter(color => !inUse.has(color)));
+  const background = rgbChannels(stageColor);
+  const tints = new Map(GROUP_PALETTE.map(color => [color, tintedOklab(color, background)]));
+  for (const group of groups) {
+    if (colors.has(group.term)) continue;
+    const overlapping = new Set(group.minterms.flatMap(minterm => colorsByMinterm.get(minterm) ?? []));
+    const neighbors = [...overlapping].map(color => tints.get(color));
+    let bestColor;
+    let bestDistance = -Infinity;
+    for (const color of available) {
+      // With no neighbors, the first palette color wins the tie.
+      const distance = nearestColorDistance(tints.get(color), neighbors);
+      if (distance > bestDistance) {
+        bestColor = color;
+        bestDistance = distance;
+      }
+    }
+    assignColor(group, bestColor);
+    available.delete(bestColor);
   }
   return colors;
 }
