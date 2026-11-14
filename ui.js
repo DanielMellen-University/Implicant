@@ -1,5 +1,5 @@
 import { getLayout, mintermToPosition, positionToMinterm, solve } from './solver.js';
-import { groupColor, randomizeValues } from './helpers.js';
+import { colorsForGroups, randomizeValues } from './helpers.js';
 const initialValues = [1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0];
 let nVars = 4;
 let values = [...initialValues];
@@ -9,6 +9,8 @@ let paintingPointer = null;
 let pendingTouch = null;
 let cycleTaps = true;
 let form = 'SOP';
+const colorSeed = (Math.random() * 0xffffffff) >>> 0;
+let groupColors = [];
 
 const map = document.querySelector('#kmap');
 const expression = document.querySelector('#expression');
@@ -59,7 +61,7 @@ function groupTint(color) {
 }
 
 function cellBackground(memberships) {
-  const colors = memberships.map((index) => groupTint(groupColor(index)));
+  const colors = memberships.map((index) => groupTint(groupColors[index]));
   if (colors.length === 1) return colors[0];
   const stops = colors.map((color, index) => {
     const start = (index / colors.length) * 100;
@@ -122,7 +124,7 @@ function buildLayer(layout, layerIndex, groups) {
         cell.style.background = cellBackground(memberships);
       }
       if (selectedGroup >= 0 && memberships.includes(selectedGroup)) {
-        cell.style.outline = `2px solid ${groupColor(selectedGroup)}`;
+        cell.style.outline = `2px solid ${groupColors[selectedGroup]}`;
         cell.style.outlineOffset = '-2px';
       }
       cell.append(element('span', 'cell-number', String(minterm)));
@@ -132,7 +134,7 @@ function buildLayer(layout, layerIndex, groups) {
         dots.setAttribute('aria-hidden', 'true');
         for (const index of memberships) {
           const dot = element('i', 'cell-dot');
-          dot.style.backgroundColor = groupColor(index);
+          dot.style.backgroundColor = groupColors[index];
           dots.append(dot);
         }
         cell.append(dots);
@@ -166,9 +168,9 @@ function buildLegend(groups) {
     row.dataset.group = String(index);
     row.setAttribute('aria-pressed', String(selectedGroup === index));
     row.setAttribute('aria-label', `${displayExpression(group.term)}, covers ${group.minterms.length} cell${group.minterms.length === 1 ? '' : 's'}`);
-    if (selectedGroup === index) row.style.borderColor = groupColor(index);
+    if (selectedGroup === index) row.style.borderColor = groupColors[index];
     const swatch = element('span', 'legend-swatch');
-    swatch.style.backgroundColor = groupColor(index);
+    swatch.style.backgroundColor = groupColors[index];
     row.append(swatch, element('span', 'legend-term', displayExpression(group.term)));
     row.append(element('span', 'legend-count', `covers ${group.minterms.length} cell${group.minterms.length === 1 ? '' : 's'}`));
     legend.append(row);
@@ -226,10 +228,49 @@ function buildExplanation(groups) {
   explanation.append(kept, dropped);
 }
 
+function sizeMap() {
+  if (!window.matchMedia('(min-width: 900px)').matches) {
+    map.style.removeProperty('--cell');
+    return;
+  }
+  const vars = Number(map.dataset.vars) || nVars;
+  const layersX = vars >= 5 ? 2 : 1;
+  const layersY = vars >= 6 ? 2 : 1;
+  const rows = vars <= 3 ? 2 : 4;
+  const cols = vars === 2 ? 2 : 4;
+  const label = 22;
+  const gap = 3;
+  const headH = 16;
+  const layerGap = 10;
+  const titleH = vars >= 5 ? 22 : 0;
+  const width = map.clientWidth;
+  const height = map.clientHeight;
+  if (width < 2 || height < 2) return;
+  const cellWidth = (width - (layersX - 1) * layerGap - layersX * (label + gap * cols)) / (layersX * cols);
+  const cellHeight = (height - (layersY - 1) * layerGap - layersY * (titleH + headH + gap * rows)) / (layersY * rows);
+  let cell = Math.floor(Math.min(cellWidth, cellHeight) * 2) / 2; // half-pixel slack
+  if (!Number.isFinite(cell)) return;
+  cell = Math.max(16, cell);
+  map.style.setProperty('--cell', `${cell}px`);
+  // If labels or rounding still overflow the box, shrink until every cell fits.
+  void map.offsetHeight;
+  const box = map.getBoundingClientRect();
+  let overflow = 0;
+  map.querySelectorAll('.cell').forEach((node) => {
+    const rect = node.getBoundingClientRect();
+    overflow = Math.max(overflow, rect.right - box.right, rect.bottom - box.bottom, box.left - rect.left, box.top - rect.top);
+  });
+  if (overflow > 0.5) {
+    cell = Math.max(16, Math.floor(cell - Math.ceil(overflow)));
+    map.style.setProperty('--cell', `${cell}px`);
+  }
+}
+
 function render() {
   const layout = getLayout(nVars);
   const result = solve(cellsForSolver(), nVars, { form });
   if (selectedGroup >= result.groups.length) selectedGroup = -1;
+  groupColors = colorsForGroups(result.groups.map((group) => group.term), colorSeed);
   const focusedMinterm = document.activeElement?.dataset?.minterm;
   const focusedGroup = document.activeElement?.dataset?.group;
   const focusedTruth = document.activeElement?.dataset?.truthMinterm;
@@ -248,6 +289,7 @@ function render() {
   if (focusedMinterm !== undefined) map.querySelector(`[data-minterm="${focusedMinterm}"]`)?.focus();
   else if (focusedGroup !== undefined) legend.querySelector(`[data-group="${focusedGroup}"]`)?.focus();
   else if (focusedTruth !== undefined) truthTable.querySelector(`[data-truth-minterm="${focusedTruth}"]`)?.focus();
+  sizeMap();
   updateUrl();
 }
 
@@ -383,3 +425,7 @@ document.querySelector('#clear').addEventListener('click', () => {
   selectedGroup = -1;
   render();
 });
+
+const mapResize = new ResizeObserver(() => sizeMap());
+mapResize.observe(map);
+window.addEventListener('resize', sizeMap);

@@ -1,6 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { BASE_GROUP_COLORS, groupColor, randomizeValues } from '../helpers.js';
+import {
+  GROUP_PALETTE,
+  colorsForGroups,
+  minPairwiseDeltaE,
+  pickSpread,
+  randomizeValues,
+} from '../helpers.js';
 import { solve } from '../solver.js';
 
 function mulberry32(seed) {
@@ -35,14 +41,35 @@ test('randomizeValues uses the provided random function independently per cell',
   assert.deepEqual(values, [0, 0, 1, 1, 2, 2]);
 });
 
-test('group colors are unique for at least 32 groups', () => {
-  assert.equal(BASE_GROUP_COLORS.length, 16);
-  assert.equal(new Set(BASE_GROUP_COLORS).size, 16);
-  const colors = Array.from({ length: 32 }, (_, index) => groupColor(index));
-  assert.equal(new Set(colors).size, 32);
-  for (let index = 0; index < 16; index += 1) {
-    assert.equal(groupColor(index), BASE_GROUP_COLORS[index]);
+test('group palettes stay perceptually distinct up to 32 colors', () => {
+  assert.equal(GROUP_PALETTE.length, 32);
+  assert.equal(new Set(GROUP_PALETTE).size, 32);
+  const threshold = 0.10;
+  for (let n = 2; n <= 32; n += 1) {
+    const spread = pickSpread(GROUP_PALETTE, n);
+    assert.equal(spread.length, n);
+    assert.equal(new Set(spread).size, n);
+    const delta = minPairwiseDeltaE(spread);
+    assert.ok(
+      delta >= threshold,
+      `N=${n} min OKLab deltaE ${delta.toFixed(4)} fell below ${threshold}`,
+    );
   }
+});
+
+test('colorsForGroups is stable per term within a seed and shuffled across seeds', () => {
+  const terms = ["A'C'E", 'BDE', "C'F", 'ADF'];
+  const first = colorsForGroups(terms, 20261113);
+  const reordered = colorsForGroups([...terms].reverse(), 20261113).reverse();
+  assert.deepEqual(reordered, first);
+  assert.equal(new Set(first).size, terms.length);
+  assert.deepEqual([...first].sort(), [...pickSpread(GROUP_PALETTE, terms.length)].sort());
+
+  const permutations = new Set();
+  for (let seed = 1; seed <= 40; seed += 1) {
+    permutations.add(colorsForGroups(terms, seed).join(','));
+  }
+  assert.ok(permutations.size >= 8, `expected several assignments, got ${permutations.size}`);
 });
 
 test('the solver stays fast on a 6-variable map with about one third X cells', () => {
