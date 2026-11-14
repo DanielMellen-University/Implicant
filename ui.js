@@ -36,6 +36,7 @@ const whyHint = document.querySelector('#why-hint');
 const mapHint = document.querySelector('#map-hint');
 const truthHint = document.querySelector('#truth-hint');
 const cycleButton = document.querySelector('#cycle-mode');
+const paintButtons = document.querySelectorAll('[data-paint]');
 const answerLabel = document.querySelector('#answer-label');
 
 function readUrlState() {
@@ -101,11 +102,13 @@ function showView(view, animate = false) {
 }
 
 function updatePaintControls() {
-  document.querySelectorAll('[data-paint]').forEach((button) => {
-    button.setAttribute('aria-pressed', String(Number(button.dataset.paint) === selectedPaint));
+  const cycling = touchLayout.matches && cycleTaps;
+  paintButtons.forEach((button) => {
+    const selected = Number(button.dataset.paint) === selectedPaint;
+    button.setAttribute('aria-pressed', String(selected && !(cycling && mapPanel.contains(button))));
   });
-  cycleButton.setAttribute('aria-pressed', String(cycleTaps));
-  mapHint.textContent = touchLayout.matches && cycleTaps
+  cycleButton.setAttribute('aria-pressed', String(cycling));
+  mapHint.textContent = cycling
     ? 'Tap a cell to cycle through 0, 1, and X. X means don’t care.'
     : 'Choose 0, 1, or X to paint. X means don’t care.';
   truthHint.textContent = `Select an output to paint it ${selectedPaint === 2 ? 'X' : selectedPaint}.`;
@@ -371,7 +374,7 @@ variableControl.addEventListener('click', (event) => {
   variableControl.querySelector(`[data-vars="${focusedCount}"]`)?.focus();
 });
 
-document.querySelectorAll('[data-paint]').forEach(button => button.addEventListener('click', () => {
+paintButtons.forEach(button => button.addEventListener('click', () => {
   selectedPaint = Number(button.dataset.paint);
   cycleTaps = false;
   updatePaintControls();
