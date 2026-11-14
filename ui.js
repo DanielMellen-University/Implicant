@@ -88,9 +88,16 @@ function buildLegend(groups) {
 function render() {
   const result = solve4(values);
   if (selectedGroup >= result.groups.length) selectedGroup = -1;
+  const focusedMinterm = document.activeElement?.dataset?.minterm;
+  const focusedGroup = document.activeElement?.dataset?.group;
   buildMap(result.groups);
   expression.textContent = `F = ${result.expression}`;
   buildLegend(result.groups);
+  if (focusedMinterm !== undefined) {
+    map.querySelector(`[data-minterm="${focusedMinterm}"]`)?.focus();
+  } else if (focusedGroup !== undefined) {
+    legend.querySelector(`[data-group="${focusedGroup}"]`)?.focus();
+  }
 }
 
 map.addEventListener('click', (event) => {
